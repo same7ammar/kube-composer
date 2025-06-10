@@ -6,6 +6,7 @@ import { VisualPreview } from './components/VisualPreview';
 import { ResourceSummary } from './components/ResourceSummary';
 import { DeploymentsList } from './components/DeploymentsList';
 import { ArchitecturePreview } from './components/ArchitecturePreview';
+import { Footer } from './components/Footer';
 import { generateKubernetesYaml } from './utils/yamlGenerator';
 import type { DeploymentConfig } from './types';
 
@@ -291,6 +292,9 @@ function App() {
           </div>
         </div>
       </main>
+
+      {/* Footer */}
+      <Footer />
 
       {/* Deployment Form Modal */}
       {showForm && (
