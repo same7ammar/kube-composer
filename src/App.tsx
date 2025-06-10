@@ -1,14 +1,13 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Download, Eye, FileText, List, Plus, Menu, X } from 'lucide-react';
 import { DeploymentForm } from './components/DeploymentForm';
 import { YamlPreview } from './components/YamlPreview';
-import { VisualPreview } from './components/VisualPreview';
 import { ResourceSummary } from './components/ResourceSummary';
 import { DeploymentsList } from './components/DeploymentsList';
 import { ArchitecturePreview } from './components/ArchitecturePreview';
 import { Footer } from './components/Footer';
 import { UsageCounter } from './components/UsageCounter';
-import { generateKubernetesYaml, generateMultiDeploymentYaml } from './utils/yamlGenerator';
+import { generateMultiDeploymentYaml } from './utils/yamlGenerator';
 import { useUsageCounter } from './hooks/useUsageCounter';
 import type { DeploymentConfig } from './types';
 
@@ -21,7 +20,7 @@ function App() {
   const [showForm, setShowForm] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
-  const { incrementCounter, formatNumber, stats } = useUsageCounter();
+  const { incrementCounter, stats } = useUsageCounter();
 
   const currentConfig = deployments[selectedDeployment] || {
     appName: '',
