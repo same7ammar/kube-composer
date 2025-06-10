@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Download, Eye, FileText, List, Github, Linkedin, Heart, Plus } from 'lucide-react';
+import { Download, Eye, FileText, List, Plus } from 'lucide-react';
 import { DeploymentForm } from './components/DeploymentForm';
 import { YamlPreview } from './components/YamlPreview';
 import { VisualPreview } from './components/VisualPreview';
 import { ResourceSummary } from './components/ResourceSummary';
-import { DeploymentsList } from './components/DeploymentsList.tsx';
+import { DeploymentsList } from './components/DeploymentsList';
 import { ArchitecturePreview } from './components/ArchitecturePreview';
 import { generateKubernetesYaml } from './utils/yamlGenerator';
 import type { DeploymentConfig } from './types';
@@ -192,6 +192,9 @@ function App() {
                       </button>
                     );
                   })}
+                  <button className="ml-4 text-sm text-gray-500 hover:text-gray-700 flex items-center space-x-1">
+                    <span>Hide Details</span>
+                  </button>
                 </div>
               </div>
             </div>
