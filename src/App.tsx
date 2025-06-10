@@ -7,7 +7,7 @@ import { ResourceSummary } from './components/ResourceSummary';
 import { DeploymentsList } from './components/DeploymentsList';
 import { ArchitecturePreview } from './components/ArchitecturePreview';
 import { Footer } from './components/Footer';
-import { generateKubernetesYaml } from './utils/yamlGenerator';
+import { generateKubernetesYaml, generateMultiDeploymentYaml } from './utils/yamlGenerator';
 import type { DeploymentConfig } from './types';
 
 type PreviewMode = 'visual' | 'yaml' | 'summary';
@@ -105,20 +105,46 @@ function App() {
   };
 
   const handleDownload = () => {
-    if (deployments.length === 0 || !currentConfig.appName) {
+    if (deployments.length === 0) {
       return;
     }
     
-    const yaml = generateKubernetesYaml(currentConfig);
+    // Filter out deployments without app names
+    const validDeployments = deployments.filter(d => d.appName);
+    if (validDeployments.length === 0) {
+      return;
+    }
+    
+    const yaml = generateMultiDeploymentYaml(validDeployments);
     const blob = new Blob([yaml], { type: 'text/yaml' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${currentConfig.appName || 'kubernetes'}-deployment.yaml`;
+    
+    // Create filename based on number of deployments
+    const filename = validDeployments.length === 1 
+      ? `${validDeployments[0].appName}-deployment.yaml`
+      : `kubernetes-deployments-${validDeployments.length}.yaml`;
+    
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  // Generate YAML for preview based on mode
+  const getPreviewYaml = () => {
+    if (deployments.length === 0) {
+      return '# No deployments configured\n# Create your first deployment to see the generated YAML';
+    }
+    
+    const validDeployments = deployments.filter(d => d.appName);
+    if (validDeployments.length === 0) {
+      return '# No valid deployments found\n# Please configure at least one deployment with an app name';
+    }
+    
+    return generateMultiDeploymentYaml(validDeployments);
   };
 
   const previewModes = [
@@ -126,6 +152,9 @@ function App() {
     { id: 'summary' as const, label: 'Summary', icon: List },
     { id: 'yaml' as const, label: 'YAML', icon: FileText }
   ];
+
+  // Check if download should be enabled
+  const hasValidDeployments = deployments.some(d => d.appName);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -169,8 +198,9 @@ function App() {
               </button>
               <button
                 onClick={handleDownload}
-                disabled={deployments.length === 0 || !currentConfig.appName}
+                disabled={!hasValidDeployments}
                 className="inline-flex items-center px-2 sm:px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 text-sm"
+                title={hasValidDeployments ? 'Download all deployments as YAML' : 'No valid deployments to download'}
               >
                 <Download className="w-4 h-4 sm:mr-1" />
                 <span className="hidden sm:inline">Download YAML</span>
@@ -240,7 +270,14 @@ function App() {
           {/* Preview Header */}
           <div className="bg-white border-b border-gray-200 p-4 flex-shrink-0">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-              <h2 className="text-lg font-semibold text-gray-900">Preview</h2>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Preview
+                {previewMode === 'yaml' && deployments.length > 1 && (
+                  <span className="ml-2 text-sm font-normal text-gray-500">
+                    (All {deployments.filter(d => d.appName).length} deployments)
+                  </span>
+                )}
+              </h2>
               <div className="flex items-center justify-between sm:justify-end">
                 <div className="flex items-center space-x-1">
                   {previewModes.map((mode) => {
@@ -269,7 +306,7 @@ function App() {
           <div className="flex-1 overflow-y-auto bg-gray-50">
             <div className="p-4 sm:p-6 pb-8">
               {previewMode === 'visual' && <ArchitecturePreview deployments={deployments} />}
-              {previewMode === 'yaml' && <YamlPreview yaml={generateKubernetesYaml(currentConfig)} />}
+              {previewMode === 'yaml' && <YamlPreview yaml={getPreviewYaml()} />}
               {previewMode === 'summary' && <ResourceSummary config={currentConfig} />}
             </div>
           </div>
