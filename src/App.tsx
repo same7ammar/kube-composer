@@ -284,7 +284,7 @@ function App() {
 
           {/* Preview Content */}
           <div className="flex-1 overflow-y-auto bg-gray-50">
-            <div className="p-4 sm:p-6">
+            <div className="p-4 sm:p-6 pb-8">
               {previewMode === 'visual' && <ArchitecturePreview deployments={deployments} />}
               {previewMode === 'yaml' && <YamlPreview yaml={generateKubernetesYaml(currentConfig)} />}
               {previewMode === 'summary' && <ResourceSummary config={currentConfig} />}
