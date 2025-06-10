@@ -4,7 +4,7 @@ import { DeploymentForm } from './components/DeploymentForm';
 import { YamlPreview } from './components/YamlPreview';
 import { VisualPreview } from './components/VisualPreview';
 import { ResourceSummary } from './components/ResourceSummary';
-import { DeploymentsList } from './components/DeploymentsList';
+import { DeploymentsList } from './components/DeploymentsList.tsx';
 import { ArchitecturePreview } from './components/ArchitecturePreview';
 import { generateKubernetesYaml } from './utils/yamlGenerator';
 import type { DeploymentConfig } from './types';
