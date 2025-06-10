@@ -13,7 +13,7 @@ function App() {
   const [config, setConfig] = useState<DeploymentConfig>({
     appName: '',
     image: '',
-    replicas: 3,
+    replicas: 1,
     port: 80,
     targetPort: 8080,
     serviceType: 'ClusterIP',
@@ -21,8 +21,8 @@ function App() {
     labels: {},
     annotations: {},
     resources: {
-      requests: { cpu: '100m', memory: '128Mi' },
-      limits: { cpu: '500m', memory: '512Mi' }
+      requests: { cpu: '', memory: '' },
+      limits: { cpu: '', memory: '' }
     },
     env: [],
     volumes: [],
