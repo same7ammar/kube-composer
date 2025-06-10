@@ -1,7 +1,63 @@
 import React, { useState } from 'react';
 import { Download, Eye, FileText, List, Github, Linkedin, Heart } from 'lucide-react';
+import { DeploymentForm } from './components/DeploymentForm';
+import { YamlPreview } from './components/YamlPreview';
+import { VisualPreview } from './components/VisualPreview';
+import { ResourceSummary } from './components/ResourceSummary';
+import { generateKubernetesYaml } from './utils/yamlGenerator';
+import type { DeploymentConfig } from './types';
+
+type PreviewMode = 'visual' | 'yaml' | 'summary';
 
 function App() {
+  const [config, setConfig] = useState<DeploymentConfig>({
+    appName: '',
+    image: '',
+    replicas: 1,
+    port: 80,
+    targetPort: 8080,
+    serviceType: 'ClusterIP',
+    namespace: 'default',
+    labels: {},
+    annotations: {},
+    resources: {
+      requests: { cpu: '', memory: '' },
+      limits: { cpu: '', memory: '' }
+    },
+    env: [],
+    volumes: [],
+    configMaps: [],
+    secrets: []
+  });
+
+  const [previewMode, setPreviewMode] = useState<PreviewMode>('visual');
+  const [yamlContent, setYamlContent] = useState('');
+
+  const handleConfigChange = (newConfig: DeploymentConfig) => {
+    setConfig(newConfig);
+    const yaml = generateKubernetesYaml(newConfig);
+    setYamlContent(yaml);
+  };
+
+  const handleDownload = () => {
+    const yaml = generateKubernetesYaml(config);
+    const blob = new Blob([yaml], { type: 'text/yaml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${config.appName || 'kubernetes'}-deployment.yaml`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const previewModes = [
+    { id: 'visual' as const, label: 'Visual', icon: Eye },
+    { id: 'yaml' as const, label: 'YAML', icon: FileText },
+    { id: 'summary' as const, label: 'Summary', icon: List }
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex flex-col">
       {/* Header */}
@@ -20,7 +76,8 @@ function App() {
               </div>
             </div>
             <button
-              disabled
+              onClick={handleDownload}
+              disabled={!config.appName}
               className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl"
             >
               <Download className="w-4 h-4 mr-2" />
@@ -37,10 +94,7 @@ function App() {
           <div className="space-y-6">
             <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200 p-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-6">Deployment Configuration</h2>
-              <div className="text-center py-12 text-gray-500">
-                <FileText className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                <p>Configuration form will be available soon</p>
-              </div>
+              <DeploymentForm config={config} onChange={handleConfigChange} />
             </div>
           </div>
 
@@ -50,27 +104,31 @@ function App() {
               {/* Preview Mode Tabs */}
               <div className="border-b border-gray-200 bg-gray-50/50">
                 <nav className="flex space-x-8 px-6" aria-label="Tabs">
-                  <button className="border-blue-500 text-blue-600 bg-white whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 transition-all duration-200">
-                    <Eye className="w-4 h-4" />
-                    <span>Visual</span>
-                  </button>
-                  <button className="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 transition-all duration-200">
-                    <FileText className="w-4 h-4" />
-                    <span>YAML</span>
-                  </button>
-                  <button className="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 transition-all duration-200">
-                    <List className="w-4 h-4" />
-                    <span>Summary</span>
-                  </button>
+                  {previewModes.map((mode) => {
+                    const Icon = mode.icon;
+                    return (
+                      <button
+                        key={mode.id}
+                        onClick={() => setPreviewMode(mode.id)}
+                        className={`${
+                          previewMode === mode.id
+                            ? 'border-blue-500 text-blue-600 bg-white'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 transition-all duration-200`}
+                      >
+                        <Icon className="w-4 h-4" />
+                        <span>{mode.label}</span>
+                      </button>
+                    );
+                  })}
                 </nav>
               </div>
 
               {/* Preview Content */}
               <div className="p-6">
-                <div className="text-center py-12 text-gray-500">
-                  <Eye className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                  <p>Configure your deployment to see the preview</p>
-                </div>
+                {previewMode === 'visual' && <VisualPreview config={config} />}
+                {previewMode === 'yaml' && <YamlPreview yaml={yamlContent} />}
+                {previewMode === 'summary' && <ResourceSummary config={config} />}
               </div>
             </div>
           </div>
