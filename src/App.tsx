@@ -298,31 +298,36 @@ function App() {
       {/* Deployment Form Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 flex-shrink-0">
-              <h3 className="text-lg font-semibold text-gray-900">
-                {currentConfig.appName ? `Edit ${currentConfig.appName}` : 'New Deployment'}
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
+              <h3 className="text-xl font-semibold text-gray-900">
+                {currentConfig.appName ? `Edit ${currentConfig.appName}` : 'Edit capture'}
               </h3>
               <button
                 onClick={() => setShowForm(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-600 transition-colors duration-200"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
-            <div className="p-4 sm:p-6 overflow-y-auto flex-1" style={{ maxHeight: 'calc(90vh - 140px)' }}>
+            
+            {/* Modal Content */}
+            <div className="flex-1 overflow-y-auto p-6">
               <DeploymentForm config={currentConfig} onChange={handleConfigChange} />
             </div>
-            <div className="flex items-center justify-end space-x-3 p-4 sm:p-6 border-t border-gray-200 flex-shrink-0">
+            
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 bg-gray-50 flex-shrink-0">
               <button
                 onClick={() => setShowForm(false)}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200"
+                className="px-6 py-2.5 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200 font-medium"
               >
                 Cancel
               </button>
               <button
                 onClick={() => setShowForm(false)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium shadow-sm"
               >
                 Save
               </button>
