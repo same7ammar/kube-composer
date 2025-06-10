@@ -7,7 +7,9 @@ import { ResourceSummary } from './components/ResourceSummary';
 import { DeploymentsList } from './components/DeploymentsList';
 import { ArchitecturePreview } from './components/ArchitecturePreview';
 import { Footer } from './components/Footer';
+import { UsageCounter } from './components/UsageCounter';
 import { generateKubernetesYaml, generateMultiDeploymentYaml } from './utils/yamlGenerator';
+import { useUsageCounter } from './hooks/useUsageCounter';
 import type { DeploymentConfig } from './types';
 
 type PreviewMode = 'visual' | 'yaml' | 'summary';
@@ -18,6 +20,8 @@ function App() {
   const [previewMode, setPreviewMode] = useState<PreviewMode>('visual');
   const [showForm, setShowForm] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  
+  const { incrementCounter, formatNumber, stats } = useUsageCounter();
 
   const currentConfig = deployments[selectedDeployment] || {
     appName: '',
@@ -104,7 +108,7 @@ function App() {
     setSelectedDeployment(index + 1);
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (deployments.length === 0) {
       return;
     }
@@ -114,6 +118,9 @@ function App() {
     if (validDeployments.length === 0) {
       return;
     }
+    
+    // Increment usage counter
+    await incrementCounter();
     
     const yaml = generateMultiDeploymentYaml(validDeployments);
     const blob = new Blob([yaml], { type: 'text/yaml' });
@@ -185,9 +192,12 @@ function App() {
             </div>
             
             <div className="flex items-center space-x-2 sm:space-x-3">
-              <div className="hidden sm:flex items-center space-x-2 text-sm text-gray-600">
-                <FileText className="w-4 h-4" />
-                <span>{deployments.length} deployment{deployments.length !== 1 ? 's' : ''}</span>
+              <div className="hidden sm:flex items-center space-x-4">
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <FileText className="w-4 h-4" />
+                  <span>{deployments.length} deployment{deployments.length !== 1 ? 's' : ''}</span>
+                </div>
+                <UsageCounter variant="compact" />
               </div>
               <button
                 onClick={handleAddDeployment}
@@ -308,6 +318,13 @@ function App() {
               {previewMode === 'visual' && <ArchitecturePreview deployments={deployments} />}
               {previewMode === 'yaml' && <YamlPreview yaml={getPreviewYaml()} />}
               {previewMode === 'summary' && <ResourceSummary config={currentConfig} />}
+              
+              {/* Usage Statistics - Show in visual mode */}
+              {previewMode === 'visual' && deployments.length > 0 && (
+                <div className="mt-6">
+                  <UsageCounter variant="detailed" />
+                </div>
+              )}
             </div>
           </div>
         </div>
