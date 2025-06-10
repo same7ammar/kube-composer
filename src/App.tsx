@@ -13,28 +13,7 @@ import type { DeploymentConfig } from './types';
 type PreviewMode = 'visual' | 'yaml' | 'summary';
 
 function App() {
-  const [deployments, setDeployments] = useState<DeploymentConfig[]>([
-    {
-      appName: 'my-app',
-      image: 'nginx:latest',
-      replicas: 3,
-      port: 80,
-      targetPort: 80,
-      serviceType: 'ClusterIP',
-      namespace: 'default',
-      labels: {},
-      annotations: {},
-      resources: {
-        requests: { cpu: '100m', memory: '128Mi' },
-        limits: { cpu: '500m', memory: '512Mi' }
-      },
-      env: [],
-      volumes: [],
-      configMaps: [],
-      secrets: []
-    }
-  ]);
-
+  const [deployments, setDeployments] = useState<DeploymentConfig[]>([]);
   const [selectedDeployment, setSelectedDeployment] = useState<number>(0);
   const [previewMode, setPreviewMode] = useState<PreviewMode>('visual');
   const [showForm, setShowForm] = useState(false);
@@ -97,27 +76,8 @@ function App() {
 
   const handleDeleteDeployment = (index: number) => {
     if (deployments.length <= 1) {
-      // Don't allow deleting the last deployment, just reset it
-      const resetDeployment: DeploymentConfig = {
-        appName: '',
-        image: '',
-        replicas: 1,
-        port: 80,
-        targetPort: 8080,
-        serviceType: 'ClusterIP',
-        namespace: 'default',
-        labels: {},
-        annotations: {},
-        resources: {
-          requests: { cpu: '', memory: '' },
-          limits: { cpu: '', memory: '' }
-        },
-        env: [],
-        volumes: [],
-        configMaps: [],
-        secrets: []
-      };
-      setDeployments([resetDeployment]);
+      // If it's the last deployment, remove it completely
+      setDeployments([]);
       setSelectedDeployment(0);
       return;
     }
@@ -145,6 +105,10 @@ function App() {
   };
 
   const handleDownload = () => {
+    if (deployments.length === 0 || !currentConfig.appName) {
+      return;
+    }
+    
     const yaml = generateKubernetesYaml(currentConfig);
     const blob = new Blob([yaml], { type: 'text/yaml' });
     const url = URL.createObjectURL(blob);
@@ -205,7 +169,7 @@ function App() {
               </button>
               <button
                 onClick={handleDownload}
-                disabled={!currentConfig.appName}
+                disabled={deployments.length === 0 || !currentConfig.appName}
                 className="inline-flex items-center px-2 sm:px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 text-sm"
               >
                 <Download className="w-4 h-4 sm:mr-1" />
@@ -238,17 +202,36 @@ function App() {
             <h2 className="text-lg font-semibold text-gray-900">Deployments</h2>
           </div>
           <div className="flex-1 overflow-y-auto">
-            <DeploymentsList
-              deployments={deployments}
-              selectedIndex={selectedDeployment}
-              onSelect={(index) => {
-                setSelectedDeployment(index);
-                setSidebarOpen(false); // Close sidebar on mobile after selection
-              }}
-              onEdit={() => setShowForm(true)}
-              onDelete={handleDeleteDeployment}
-              onDuplicate={handleDuplicateDeployment}
-            />
+            {deployments.length > 0 ? (
+              <DeploymentsList
+                deployments={deployments}
+                selectedIndex={selectedDeployment}
+                onSelect={(index) => {
+                  setSelectedDeployment(index);
+                  setSidebarOpen(false); // Close sidebar on mobile after selection
+                }}
+                onEdit={() => setShowForm(true)}
+                onDelete={handleDeleteDeployment}
+                onDuplicate={handleDuplicateDeployment}
+              />
+            ) : (
+              <div className="p-6 text-center">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <FileText className="w-8 h-8 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No Deployments</h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  Get started by creating your first Kubernetes deployment
+                </p>
+                <button
+                  onClick={handleAddDeployment}
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm font-medium"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Deployment
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -303,7 +286,7 @@ function App() {
             {/* Modal Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
               <h3 className="text-xl font-semibold text-gray-900">
-                {currentConfig.appName ? `Edit ${currentConfig.appName}` : 'Edit capture'}
+                {currentConfig.appName ? `Edit ${currentConfig.appName}` : 'Create New Deployment'}
               </h3>
               <button
                 onClick={() => setShowForm(false)}
