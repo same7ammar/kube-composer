@@ -1,0 +1,229 @@
+import type { DeploymentConfig, KubernetesResource } from '../types';
+
+export function generateKubernetesYaml(config: DeploymentConfig): string {
+  if (!config.appName) {
+    return '# Please configure your deployment first';
+  }
+
+  const resources: KubernetesResource[] = [];
+
+  // Generate Deployment
+  const deployment: KubernetesResource = {
+    apiVersion: 'apps/v1',
+    kind: 'Deployment',
+    metadata: {
+      name: config.appName,
+      namespace: config.namespace,
+      labels: {
+        app: config.appName,
+        ...config.labels
+      },
+      ...(Object.keys(config.annotations).length > 0 && { annotations: config.annotations })
+    },
+    spec: {
+      replicas: config.replicas,
+      selector: {
+        matchLabels: {
+          app: config.appName
+        }
+      },
+      template: {
+        metadata: {
+          labels: {
+            app: config.appName,
+            ...config.labels
+          }
+        },
+        spec: {
+          containers: [
+            {
+              name: config.appName,
+              image: config.image,
+              ports: [
+                {
+                  containerPort: config.targetPort
+                }
+              ],
+              ...(config.env.length > 0 && {
+                env: config.env.map(e => ({ name: e.name, value: e.value }))
+              }),
+              ...(config.volumes.length > 0 && {
+                volumeMounts: config.volumes.map(v => ({
+                  name: v.name,
+                  mountPath: v.mountPath
+                }))
+              }),
+              ...((config.resources.requests.cpu || config.resources.requests.memory || 
+                  config.resources.limits.cpu || config.resources.limits.memory) && {
+                resources: {
+                  ...(config.resources.requests.cpu || config.resources.requests.memory) && {
+                    requests: {
+                      ...(config.resources.requests.cpu && { cpu: config.resources.requests.cpu }),
+                      ...(config.resources.requests.memory && { memory: config.resources.requests.memory })
+                    }
+                  },
+                  ...(config.resources.limits.cpu || config.resources.limits.memory) && {
+                    limits: {
+                      ...(config.resources.limits.cpu && { cpu: config.resources.limits.cpu }),
+                      ...(config.resources.limits.memory && { memory: config.resources.limits.memory })
+                    }
+                  }
+                }
+              })
+            }
+          ],
+          ...(config.volumes.length > 0 && {
+            volumes: config.volumes.map(v => ({
+              name: v.name,
+              ...(v.type === 'emptyDir' && { emptyDir: {} }),
+              ...(v.type === 'configMap' && { configMap: { name: v.name } }),
+              ...(v.type === 'secret' && { secret: { secretName: v.name } })
+            }))
+          })
+        }
+      }
+    }
+  };
+
+  resources.push(deployment);
+
+  // Generate Service
+  const service: KubernetesResource = {
+    apiVersion: 'v1',
+    kind: 'Service',
+    metadata: {
+      name: `${config.appName}-service`,
+      namespace: config.namespace,
+      labels: {
+        app: config.appName,
+        ...config.labels
+      }
+    },
+    spec: {
+      selector: {
+        app: config.appName
+      },
+      ports: [
+        {
+          port: config.port,
+          targetPort: config.targetPort,
+          protocol: 'TCP'
+        }
+      ],
+      type: config.serviceType
+    }
+  };
+
+  resources.push(service);
+
+  // Generate ConfigMaps
+  config.configMaps.forEach(cm => {
+    const configMap: KubernetesResource = {
+      apiVersion: 'v1',
+      kind: 'ConfigMap',
+      metadata: {
+        name: cm.name,
+        namespace: config.namespace,
+        labels: {
+          app: config.appName,
+          ...config.labels
+        }
+      },
+      data: cm.data
+    };
+    resources.push(configMap);
+  });
+
+  // Generate Secrets
+  config.secrets.forEach(secret => {
+    const secretResource: KubernetesResource = {
+      apiVersion: 'v1',
+      kind: 'Secret',
+      metadata: {
+        name: secret.name,
+        namespace: config.namespace,
+        labels: {
+          app: config.appName,
+          ...config.labels
+        }
+      },
+      type: 'Opaque',
+      data: Object.fromEntries(
+        Object.entries(secret.data).map(([key, value]) => [key, btoa(value)])
+      )
+    };
+    resources.push(secretResource);
+  });
+
+  // Convert to YAML
+  return resources.map(resource => {
+    const yaml = objectToYaml(resource);
+    return yaml;
+  }).join('\n---\n');
+}
+
+export function generateMultiDeploymentYaml(deployments: DeploymentConfig[]): string {
+  if (deployments.length === 0) {
+    return '# No deployments configured';
+  }
+
+  const allResources: string[] = [];
+
+  // Add header comment
+  if (deployments.length > 1) {
+    allResources.push(`# Kubernetes YAML for ${deployments.length} deployments`);
+    allResources.push(`# Generated by Kube Composer`);
+    allResources.push(`# Deployments: ${deployments.map(d => d.appName).join(', ')}`);
+    allResources.push('');
+  }
+
+  // Generate YAML for each deployment
+  deployments.forEach((deployment, index) => {
+    if (deployment.appName) {
+      if (index > 0) {
+        allResources.push(''); // Add spacing between deployments
+      }
+      
+      if (deployments.length > 1) {
+        allResources.push(`# === ${deployment.appName.toUpperCase()} DEPLOYMENT ===`);
+      }
+      
+      const deploymentYaml = generateKubernetesYaml(deployment);
+      allResources.push(deploymentYaml);
+    }
+  });
+
+  return allResources.join('\n');
+}
+
+function objectToYaml(obj: any, indent = 0): string {
+  const spaces = '  '.repeat(indent);
+  let yaml = '';
+
+  for (const [key, value] of Object.entries(obj)) {
+    if (value === null || value === undefined) continue;
+    
+    yaml += `${spaces}${key}:`;
+    
+    if (typeof value === 'object' && !Array.isArray(value)) {
+      yaml += '\n' + objectToYaml(value, indent + 1);
+    } else if (Array.isArray(value)) {
+      if (value.length === 0) {
+        yaml += ' []\n';
+      } else {
+        yaml += '\n';
+        value.forEach(item => {
+          if (typeof item === 'object') {
+            yaml += `${spaces}  -\n${objectToYaml(item, indent + 2)}`;
+          } else {
+            yaml += `${spaces}  - ${item}\n`;
+          }
+        });
+      }
+    } else {
+      yaml += ` ${value}\n`;
+    }
+  }
+  
+  return yaml;
+}
