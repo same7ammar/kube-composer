@@ -1,0 +1,19 @@
+export interface DeploymentConfig {
+  appName: string;
+  image: string;
+  replicas: number;
+  port: number;
+  targetPort: number;
+  serviceType: 'ClusterIP' | 'NodePort' | 'LoadBalancer';
+  namespace: string;
+  labels: Record<string, string>;
+  annotations: Record<string, string>;
+  resources: {
+    requests: { cpu: string; memory: string };
+    limits: { cpu: string; memory: string };
+  };
+  env: Array<{ name: string; value: string }>;
+  volumes: Array<{ name: string; type: string; source: string }>;
+  configMaps: Array<{ name: string; data: Record<string, string> }>;
+  secrets: Array<{ name: string; data: Record<string, string> }>;
+}
