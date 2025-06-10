@@ -49,15 +49,15 @@ export function DeploymentForm({ config, onChange }: DeploymentFormProps) {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       {/* Basic Configuration */}
-      <div className="space-y-6">
-        <div className="flex items-center space-x-2 text-lg font-semibold text-gray-900">
-          <Server className="w-5 h-5 text-blue-600" />
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex items-center space-x-2 text-base sm:text-lg font-semibold text-gray-900">
+          <Server className="w-4 sm:w-5 h-4 sm:h-5 text-blue-600" />
           <span>Basic Configuration</span>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Application Name *
@@ -66,7 +66,7 @@ export function DeploymentForm({ config, onChange }: DeploymentFormProps) {
               type="text"
               value={config.appName}
               onChange={(e) => updateConfig({ appName: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
               placeholder="my-app"
             />
           </div>
@@ -79,7 +79,7 @@ export function DeploymentForm({ config, onChange }: DeploymentFormProps) {
               type="text"
               value={config.image}
               onChange={(e) => updateConfig({ image: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
               placeholder="nginx:latest"
             />
           </div>
@@ -93,7 +93,7 @@ export function DeploymentForm({ config, onChange }: DeploymentFormProps) {
               min="1"
               value={config.replicas}
               onChange={(e) => updateConfig({ replicas: parseInt(e.target.value) || 1 })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
             />
           </div>
           
@@ -105,7 +105,7 @@ export function DeploymentForm({ config, onChange }: DeploymentFormProps) {
               type="text"
               value={config.namespace}
               onChange={(e) => updateConfig({ namespace: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
               placeholder="default"
             />
           </div>
@@ -113,13 +113,13 @@ export function DeploymentForm({ config, onChange }: DeploymentFormProps) {
       </div>
 
       {/* Service Configuration */}
-      <div className="space-y-6">
-        <div className="flex items-center space-x-2 text-lg font-semibold text-gray-900">
-          <Settings className="w-5 h-5 text-green-600" />
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex items-center space-x-2 text-base sm:text-lg font-semibold text-gray-900">
+          <Settings className="w-4 sm:w-5 h-4 sm:h-5 text-green-600" />
           <span>Service Configuration</span>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Service Port
@@ -128,7 +128,7 @@ export function DeploymentForm({ config, onChange }: DeploymentFormProps) {
               type="number"
               value={config.port}
               onChange={(e) => updateConfig({ port: parseInt(e.target.value) || 80 })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
             />
           </div>
           
@@ -140,7 +140,7 @@ export function DeploymentForm({ config, onChange }: DeploymentFormProps) {
               type="number"
               value={config.targetPort}
               onChange={(e) => updateConfig({ targetPort: parseInt(e.target.value) || 8080 })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
             />
           </div>
           
@@ -151,7 +151,7 @@ export function DeploymentForm({ config, onChange }: DeploymentFormProps) {
             <select
               value={config.serviceType}
               onChange={(e) => updateConfig({ serviceType: e.target.value as any })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
             >
               <option value="ClusterIP">ClusterIP</option>
               <option value="NodePort">NodePort</option>
@@ -162,13 +162,13 @@ export function DeploymentForm({ config, onChange }: DeploymentFormProps) {
       </div>
 
       {/* Resource Limits */}
-      <div className="space-y-6">
-        <div className="flex items-center space-x-2 text-lg font-semibold text-gray-900">
-          <Database className="w-5 h-5 text-purple-600" />
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex items-center space-x-2 text-base sm:text-lg font-semibold text-gray-900">
+          <Database className="w-4 sm:w-5 h-4 sm:h-5 text-purple-600" />
           <span>Resource Limits</span>
         </div>
         
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               CPU Request
@@ -182,7 +182,7 @@ export function DeploymentForm({ config, onChange }: DeploymentFormProps) {
                   requests: { ...config.resources.requests, cpu: e.target.value }
                 }
               })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
               placeholder="100m"
             />
           </div>
@@ -200,7 +200,7 @@ export function DeploymentForm({ config, onChange }: DeploymentFormProps) {
                   requests: { ...config.resources.requests, memory: e.target.value }
                 }
               })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
               placeholder="128Mi"
             />
           </div>
@@ -218,7 +218,7 @@ export function DeploymentForm({ config, onChange }: DeploymentFormProps) {
                   limits: { ...config.resources.limits, cpu: e.target.value }
                 }
               })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
               placeholder="500m"
             />
           </div>
@@ -236,7 +236,7 @@ export function DeploymentForm({ config, onChange }: DeploymentFormProps) {
                   limits: { ...config.resources.limits, memory: e.target.value }
                 }
               })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
               placeholder="256Mi"
             />
           </div>
@@ -244,15 +244,15 @@ export function DeploymentForm({ config, onChange }: DeploymentFormProps) {
       </div>
 
       {/* Environment Variables */}
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2 text-lg font-semibold text-gray-900">
-            <Key className="w-5 h-5 text-orange-600" />
+          <div className="flex items-center space-x-2 text-base sm:text-lg font-semibold text-gray-900">
+            <Key className="w-4 sm:w-5 h-4 sm:h-5 text-orange-600" />
             <span>Environment Variables</span>
           </div>
           <button
             onClick={addEnvVar}
-            className="inline-flex items-center px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+            className="inline-flex items-center px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm"
           >
             <Plus className="w-4 h-4 mr-1" />
             Add
@@ -262,24 +262,24 @@ export function DeploymentForm({ config, onChange }: DeploymentFormProps) {
         {config.env.length > 0 && (
           <div className="space-y-3">
             {config.env.map((envVar, index) => (
-              <div key={index} className="flex items-center space-x-3">
+              <div key={index} className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
                 <input
                   type="text"
                   value={envVar.name}
                   onChange={(e) => updateEnvVar(index, 'name', e.target.value)}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
                   placeholder="Variable name"
                 />
                 <input
                   type="text"
                   value={envVar.value}
                   onChange={(e) => updateEnvVar(index, 'value', e.target.value)}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
                   placeholder="Variable value"
                 />
                 <button
                   onClick={() => removeEnvVar(index)}
-                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200 self-center sm:self-auto"
                 >
                   <Minus className="w-4 h-4" />
                 </button>
@@ -290,15 +290,15 @@ export function DeploymentForm({ config, onChange }: DeploymentFormProps) {
       </div>
 
       {/* Volumes */}
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2 text-lg font-semibold text-gray-900">
-            <Database className="w-5 h-5 text-indigo-600" />
+          <div className="flex items-center space-x-2 text-base sm:text-lg font-semibold text-gray-900">
+            <Database className="w-4 sm:w-5 h-4 sm:h-5 text-indigo-600" />
             <span>Volumes</span>
           </div>
           <button
             onClick={addVolume}
-            className="inline-flex items-center px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+            className="inline-flex items-center px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm"
           >
             <Plus className="w-4 h-4 mr-1" />
             Add
@@ -308,25 +308,25 @@ export function DeploymentForm({ config, onChange }: DeploymentFormProps) {
         {config.volumes.length > 0 && (
           <div className="space-y-3">
             {config.volumes.map((volume, index) => (
-              <div key={index} className="flex items-center space-x-3">
+              <div key={index} className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
                 <input
                   type="text"
                   value={volume.name}
                   onChange={(e) => updateVolume(index, 'name', e.target.value)}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
                   placeholder="Volume name"
                 />
                 <input
                   type="text"
                   value={volume.mountPath}
                   onChange={(e) => updateVolume(index, 'mountPath', e.target.value)}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
                   placeholder="/path/to/mount"
                 />
                 <select
                   value={volume.type}
                   onChange={(e) => updateVolume(index, 'type', e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
                 >
                   <option value="emptyDir">Empty Dir</option>
                   <option value="configMap">Config Map</option>
@@ -334,7 +334,7 @@ export function DeploymentForm({ config, onChange }: DeploymentFormProps) {
                 </select>
                 <button
                   onClick={() => removeVolume(index)}
-                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200 self-center sm:self-auto"
                 >
                   <Minus className="w-4 h-4" />
                 </button>
