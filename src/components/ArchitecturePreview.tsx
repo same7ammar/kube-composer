@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Database, Server, Globe, Info, ChevronDown, ChevronUp, Activity, Cpu, HardDrive, Network } from 'lucide-react';
+import { Database, Server, Globe, Info, ChevronDown, ChevronUp, Activity, Cpu, HardDrive, Network, Eye, EyeOff } from 'lucide-react';
 import type { DeploymentConfig } from '../types';
 
 interface ArchitecturePreviewProps {
@@ -9,6 +9,7 @@ interface ArchitecturePreviewProps {
 export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
   const [expandedDeployments, setExpandedDeployments] = useState<Set<number>>(new Set([0]));
   const [selectedNamespace, setSelectedNamespace] = useState<string | null>(null);
+  const [showDetails, setShowDetails] = useState(true);
 
   const validDeployments = deployments.filter(d => d.appName);
   const totalPods = validDeployments.reduce((sum, d) => sum + d.replicas, 0);
@@ -26,6 +27,10 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
       newExpanded.add(index);
     }
     setExpandedDeployments(newExpanded);
+  };
+
+  const toggleDetails = () => {
+    setShowDetails(!showDetails);
   };
 
   const getServiceTypeColor = (type: string) => {
@@ -75,9 +80,27 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
             <h3 className="text-2xl font-bold mb-2">Kubernetes Architecture</h3>
             <p className="text-blue-100">Real-time visualization of your deployment infrastructure</p>
           </div>
-          <div className="flex items-center space-x-2 mt-4 lg:mt-0">
-            <Activity className="w-5 h-5 text-green-300" />
-            <span className="text-sm text-blue-100">Live Preview</span>
+          <div className="flex items-center space-x-4 mt-4 lg:mt-0">
+            <div className="flex items-center space-x-2">
+              <Activity className="w-5 h-5 text-green-300" />
+              <span className="text-sm text-blue-100">Live Preview</span>
+            </div>
+            <button
+              onClick={toggleDetails}
+              className="flex items-center space-x-2 px-3 py-2 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 hover:bg-white/20 transition-all duration-200"
+            >
+              {showDetails ? (
+                <>
+                  <EyeOff className="w-4 h-4" />
+                  <span className="text-sm">Hide Details</span>
+                </>
+              ) : (
+                <>
+                  <Eye className="w-4 h-4" />
+                  <span className="text-sm">Show Details</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
 
@@ -189,7 +212,7 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
               <div className="p-6 space-y-4">
                 {namespaceDeployments.map((deployment, index) => {
                   const globalIndex = validDeployments.indexOf(deployment);
-                  const isExpanded = expandedDeployments.has(globalIndex);
+                  const isExpanded = showDetails && expandedDeployments.has(globalIndex);
                   const health = getHealthStatus(deployment);
                   
                   return (
@@ -197,7 +220,7 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
                       {/* Enhanced Deployment Header */}
                       <div 
                         className="px-4 py-3 border-b border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors duration-200"
-                        onClick={() => toggleDeployment(globalIndex)}
+                        onClick={() => showDetails && toggleDeployment(globalIndex)}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3 min-w-0 flex-1">
@@ -220,10 +243,12 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
                               <div className="text-sm font-medium text-gray-900">{deployment.replicas} replica{deployment.replicas !== 1 ? 's' : ''}</div>
                               <div className="text-xs text-gray-500">Port {deployment.port}→{deployment.targetPort}</div>
                             </div>
-                            {isExpanded ? (
-                              <ChevronUp className="w-5 h-5 text-gray-400" />
-                            ) : (
-                              <ChevronDown className="w-5 h-5 text-gray-400" />
+                            {showDetails && (
+                              isExpanded ? (
+                                <ChevronUp className="w-5 h-5 text-gray-400" />
+                              ) : (
+                                <ChevronDown className="w-5 h-5 text-gray-400" />
+                              )
                             )}
                           </div>
                         </div>
@@ -387,7 +412,7 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
               </p>
               <p>
                 Each deployment manages container replicas and is exposed through services for network access. 
-                Click on deployments above to explore detailed configurations and resource allocations.
+                {showDetails ? 'Click on deployments above to explore detailed configurations and resource allocations.' : 'Enable details view to explore configurations and resource allocations.'}
               </p>
             </div>
           </div>

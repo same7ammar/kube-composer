@@ -277,9 +277,6 @@ function App() {
                     );
                   })}
                 </div>
-                <button className="ml-4 text-xs sm:text-sm text-gray-500 hover:text-gray-700 hidden sm:flex items-center space-x-1">
-                  <span>Hide Details</span>
-                </button>
               </div>
             </div>
           </div>
