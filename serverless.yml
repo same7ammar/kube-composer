@@ -1,0 +1,211 @@
+service: kube-composer
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  memorySize: 512
+  timeout: 30
+  environment:
+    NODE_ENV: production
+
+plugins:
+  - serverless-s3-sync
+  - serverless-cloudfront-invalidate
+
+custom:
+  # S3 Bucket for static assets
+  bucketName: kube-composer-${self:provider.stage}-${random:8}
+  
+  # S3 Sync configuration
+  s3Sync:
+    - bucketName: ${self:custom.bucketName}
+      localDir: dist
+      acl: public-read
+      followSymlinks: true
+      defaultContentType: text/html
+      params:
+        - "*.html":
+            CacheControl: 'no-cache'
+        - "*.js":
+            CacheControl: 'max-age=31536000'
+        - "*.css":
+            CacheControl: 'max-age=31536000'
+        - "*.png":
+            CacheControl: 'max-age=31536000'
+        - "*.jpg":
+            CacheControl: 'max-age=31536000'
+        - "*.svg":
+            CacheControl: 'max-age=31536000'
+
+  # CloudFront configuration
+  cloudfrontInvalidate:
+    distributionIdKey: CloudFrontDistributionId
+    items:
+      - "/*"
+
+functions:
+  # API function for usage counter
+  api:
+    handler: lambda/api.handler
+    events:
+      - http:
+          path: /{proxy+}
+          method: ANY
+          cors: true
+      - http:
+          path: /
+          method: ANY
+          cors: true
+    environment:
+      DYNAMODB_TABLE: ${self:service}-${self:provider.stage}-usage
+
+resources:
+  Resources:
+    # S3 Bucket for hosting static files
+    StaticSiteBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:custom.bucketName}
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: false
+          BlockPublicPolicy: false
+          IgnorePublicAcls: false
+          RestrictPublicBuckets: false
+        WebsiteConfiguration:
+          IndexDocument: index.html
+          ErrorDocument: index.html
+
+    # S3 Bucket Policy
+    StaticSiteBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: !Ref StaticSiteBucket
+        PolicyDocument:
+          Statement:
+            - Effect: Allow
+              Principal: "*"
+              Action: s3:GetObject
+              Resource: !Sub "${StaticSiteBucket}/*"
+
+    # CloudFront Distribution
+    CloudFrontDistribution:
+      Type: AWS::CloudFront::Distribution
+      Properties:
+        DistributionConfig:
+          Origins:
+            - Id: S3Origin
+              DomainName: !GetAtt StaticSiteBucket.RegionalDomainName
+              S3OriginConfig:
+                OriginAccessIdentity: ""
+            - Id: APIOrigin
+              DomainName: !Sub "${ApiGatewayRestApi}.execute-api.${self:provider.region}.amazonaws.com"
+              OriginPath: /${self:provider.stage}
+              CustomOriginConfig:
+                HTTPPort: 443
+                OriginProtocolPolicy: https-only
+          Enabled: true
+          DefaultRootObject: index.html
+          DefaultCacheBehavior:
+            TargetOriginId: S3Origin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            CachedMethods:
+              - GET
+              - HEAD
+            Compress: true
+            ForwardedValues:
+              QueryString: false
+              Cookies:
+                Forward: none
+          CacheBehaviors:
+            - PathPattern: "/api/*"
+              TargetOriginId: APIOrigin
+              ViewerProtocolPolicy: redirect-to-https
+              AllowedMethods:
+                - DELETE
+                - GET
+                - HEAD
+                - OPTIONS
+                - PATCH
+                - POST
+                - PUT
+              CachedMethods:
+                - GET
+                - HEAD
+              ForwardedValues:
+                QueryString: true
+                Headers:
+                  - Authorization
+                  - Content-Type
+              TTL: 0
+              DefaultTTL: 0
+              MaxTTL: 0
+          CustomErrorResponses:
+            - ErrorCode: 404
+              ResponseCode: 200
+              ResponsePagePath: /index.html
+            - ErrorCode: 403
+              ResponseCode: 200
+              ResponsePagePath: /index.html
+          PriceClass: PriceClass_100
+
+    # DynamoDB Table for usage tracking
+    UsageTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-${self:provider.stage}-usage
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+
+    # IAM Role for Lambda
+    LambdaExecutionRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: lambda.amazonaws.com
+              Action: sts:AssumeRole
+        ManagedPolicyArns:
+          - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        Policies:
+          - PolicyName: DynamoDBAccess
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - dynamodb:GetItem
+                    - dynamodb:PutItem
+                    - dynamodb:UpdateItem
+                  Resource: !GetAtt UsageTable.Arn
+
+  Outputs:
+    CloudFrontDistributionId:
+      Value: !Ref CloudFrontDistribution
+      Export:
+        Name: ${self:service}-${self:provider.stage}-CloudFrontDistributionId
+    
+    CloudFrontURL:
+      Value: !Sub "https://${CloudFrontDistribution.DomainName}"
+      Description: CloudFront Distribution URL
+      
+    S3BucketName:
+      Value: !Ref StaticSiteBucket
+      Description: S3 Bucket for static assets
+      
+    APIEndpoint:
+      Value: !Sub "https://${ApiGatewayRestApi}.execute-api.${self:provider.region}.amazonaws.com/${self:provider.stage}"
+      Description: API Gateway endpoint
