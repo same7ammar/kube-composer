@@ -318,17 +318,21 @@ function App() {
               {previewMode === 'visual' && <ArchitecturePreview deployments={deployments} />}
               {previewMode === 'yaml' && <YamlPreview yaml={getPreviewYaml()} />}
               {previewMode === 'summary' && <ResourceSummary config={currentConfig} />}
-              
-              {/* Usage Statistics - Show in visual mode */}
-              {previewMode === 'visual' && deployments.length > 0 && (
-                <div className="mt-6">
-                  <UsageCounter variant="detailed" />
-                </div>
-              )}
             </div>
           </div>
         </div>
       </main>
+
+      {/* Usage Counter - Above Footer */}
+      <div className="bg-gray-50 px-4 sm:px-6 lg:px-8 py-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-6">
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Community Impact</h3>
+            <p className="text-gray-600">Join thousands of developers using Kube Composer to simplify Kubernetes deployments</p>
+          </div>
+          <UsageCounter variant="detailed" />
+        </div>
+      </div>
 
       {/* Footer */}
       <Footer />

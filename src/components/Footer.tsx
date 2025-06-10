@@ -1,6 +1,5 @@
 import React from 'react';
 import { Github, Heart, ExternalLink, FileText, Zap, Shield, Users } from 'lucide-react';
-import { UsageCounter } from './UsageCounter';
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -158,17 +157,6 @@ export function Footer() {
                 </a>
               </li>
             </ul>
-          </div>
-        </div>
-
-        {/* Usage Statistics in Footer */}
-        <div className="mt-12 pt-8 border-t border-gray-700">
-          <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10">
-            <div className="text-center mb-4">
-              <h4 className="text-lg font-semibold text-white mb-2">Community Impact</h4>
-              <p className="text-gray-300 text-sm">Join thousands of developers using Kube Composer</p>
-            </div>
-            <UsageCounter variant="detailed" className="bg-white/10 border-white/20" />
           </div>
         </div>
       </div>
