@@ -94,6 +94,55 @@ function App() {
     setShowForm(true);
   };
 
+  const handleDeleteDeployment = (index: number) => {
+    if (deployments.length <= 1) {
+      // Don't allow deleting the last deployment, just reset it
+      const resetDeployment: DeploymentConfig = {
+        appName: '',
+        image: '',
+        replicas: 1,
+        port: 80,
+        targetPort: 8080,
+        serviceType: 'ClusterIP',
+        namespace: 'default',
+        labels: {},
+        annotations: {},
+        resources: {
+          requests: { cpu: '', memory: '' },
+          limits: { cpu: '', memory: '' }
+        },
+        env: [],
+        volumes: [],
+        configMaps: [],
+        secrets: []
+      };
+      setDeployments([resetDeployment]);
+      setSelectedDeployment(0);
+      return;
+    }
+
+    const newDeployments = deployments.filter((_, i) => i !== index);
+    setDeployments(newDeployments);
+    
+    // Adjust selected deployment index
+    if (selectedDeployment >= index) {
+      setSelectedDeployment(Math.max(0, selectedDeployment - 1));
+    }
+  };
+
+  const handleDuplicateDeployment = (index: number) => {
+    const deploymentToDuplicate = deployments[index];
+    const duplicatedDeployment: DeploymentConfig = {
+      ...deploymentToDuplicate,
+      appName: `${deploymentToDuplicate.appName}-copy`
+    };
+    
+    const newDeployments = [...deployments];
+    newDeployments.splice(index + 1, 0, duplicatedDeployment);
+    setDeployments(newDeployments);
+    setSelectedDeployment(index + 1);
+  };
+
   const handleDownload = () => {
     const yaml = generateKubernetesYaml(currentConfig);
     const blob = new Blob([yaml], { type: 'text/yaml' });
@@ -196,6 +245,8 @@ function App() {
                 setSidebarOpen(false); // Close sidebar on mobile after selection
               }}
               onEdit={() => setShowForm(true)}
+              onDelete={handleDeleteDeployment}
+              onDuplicate={handleDuplicateDeployment}
             />
           </div>
         </div>
