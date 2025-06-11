@@ -4,7 +4,7 @@ import { DeploymentForm } from './components/DeploymentForm';
 import { YamlPreview } from './components/YamlPreview';
 import { ResourceSummary } from './components/ResourceSummary';
 import { DeploymentsList } from './components/DeploymentsList';
-import { NamespacesList } from './components/NamespacesList';
+import { NamespacesList } from './components/NamespacesList.tsx';
 import { ArchitecturePreview } from './components/ArchitecturePreview';
 import { NamespaceManager } from './components/NamespaceManager';
 import { Footer } from './components/Footer';
