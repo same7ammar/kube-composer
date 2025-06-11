@@ -25,7 +25,7 @@ export function Footer() {
             </p>
             <div className="flex items-center space-x-4">
               <a
-                href="https://github.com"
+                href="https://github.com/same7ammar/kube-composer"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-white transition-colors duration-200"
@@ -125,7 +125,9 @@ export function Footer() {
             <ul className="space-y-3">
               <li>
                 <a
-                  href="#"
+                  href="https://github.com/same7ammar/kube-composer#readme"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-gray-300 hover:text-white transition-colors duration-200 text-sm"
                 >
                   Getting Started
@@ -133,26 +135,32 @@ export function Footer() {
               </li>
               <li>
                 <a
-                  href="#"
+                  href="https://github.com/same7ammar/kube-composer#readme"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-gray-300 hover:text-white transition-colors duration-200 text-sm"
                 >
-                  Best Practices
+                  Documentation
                 </a>
               </li>
               <li>
                 <a
-                  href="#"
-                  className="text-gray-300 hover:text-white transition-colors duration-200 text-sm"
-                >
-                  Troubleshooting
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#"
+                  href="https://github.com/same7ammar/kube-composer/issues"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-gray-300 hover:text-white transition-colors duration-200 text-sm"
                 >
                   Report Issues
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://github.com/same7ammar/kube-composer/discussions"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-300 hover:text-white transition-colors duration-200 text-sm"
+                >
+                  Discussions
                 </a>
               </li>
             </ul>
@@ -170,16 +178,21 @@ export function Footer() {
               </p>
               <div className="flex items-center space-x-4">
                 <a
-                  href="#"
+                  href="https://github.com/same7ammar/kube-composer/blob/main/LICENSE"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-gray-400 hover:text-white transition-colors duration-200 text-sm"
                 >
-                  Privacy Policy
+                  MIT License
                 </a>
                 <a
-                  href="#"
-                  className="text-gray-400 hover:text-white transition-colors duration-200 text-sm"
+                  href="https://github.com/same7ammar/kube-composer"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center space-x-1 text-gray-400 hover:text-white transition-colors duration-200 text-sm"
                 >
-                  Terms of Service
+                  <Github className="w-4 h-4" />
+                  <span>Source Code</span>
                 </a>
               </div>
             </div>

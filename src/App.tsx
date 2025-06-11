@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Download, Eye, FileText, List, Plus, Menu, X } from 'lucide-react';
+import { Download, Eye, FileText, List, Plus, Menu, X, Star } from 'lucide-react';
 import { DeploymentForm } from './components/DeploymentForm';
 import { YamlPreview } from './components/YamlPreview';
 import { ResourceSummary } from './components/ResourceSummary';
@@ -196,6 +196,18 @@ function App() {
                 </div>
                 <SocialShare />
               </div>
+              
+              {/* GitHub Star Button */}
+              <a
+                href="https://github.com/same7ammar/kube-composer"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center px-2 sm:px-3 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors duration-200 text-sm"
+              >
+                <Star className="w-4 h-4 sm:mr-1" />
+                <span className="hidden sm:inline">Star</span>
+              </a>
+              
               <button
                 onClick={handleAddDeployment}
                 className="inline-flex items-center px-2 sm:px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 text-sm"
