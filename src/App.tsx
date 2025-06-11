@@ -10,7 +10,7 @@ import { NamespaceManager } from './components/NamespaceManager';
 import { Footer } from './components/Footer';
 import { SocialShare } from './components/SocialShare';
 import { SEOHead } from './components/SEOHead';
-import { generateMultiDeploymentYaml } from './utils/yamlGenerator';
+import { generateMultiDeploymentYaml, generateNamespaceYaml } from './utils/yamlGenerator';
 import type { DeploymentConfig, Namespace } from './types';
 
 type PreviewMode = 'visual' | 'yaml' | 'summary';
@@ -166,25 +166,36 @@ function App() {
   };
 
   const handleDownload = async () => {
-    if (deployments.length === 0) {
-      return;
+    let yaml = '';
+    let filename = '';
+
+    if (sidebarMode === 'namespaces') {
+      // Download namespace YAML
+      yaml = generateNamespaceYaml(namespaces);
+      filename = namespaces.length === 1 
+        ? `${namespaces[0].name}-namespace.yaml`
+        : `kubernetes-namespaces-${namespaces.filter(ns => !['default', 'kube-system', 'kube-public', 'kube-node-lease'].includes(ns.name)).length}.yaml`;
+    } else {
+      // Download deployment YAML
+      if (deployments.length === 0) {
+        return;
+      }
+      
+      const validDeployments = deployments.filter(d => d.appName);
+      if (validDeployments.length === 0) {
+        return;
+      }
+      
+      yaml = generateMultiDeploymentYaml(validDeployments, namespaces);
+      filename = validDeployments.length === 1 
+        ? `${validDeployments[0].appName}-deployment.yaml`
+        : `kubernetes-deployments-${validDeployments.length}.yaml`;
     }
     
-    const validDeployments = deployments.filter(d => d.appName);
-    if (validDeployments.length === 0) {
-      return;
-    }
-    
-    const yaml = generateMultiDeploymentYaml(validDeployments, namespaces);
     const blob = new Blob([yaml], { type: 'text/yaml' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    
-    const filename = validDeployments.length === 1 
-      ? `${validDeployments[0].appName}-deployment.yaml`
-      : `kubernetes-deployments-${validDeployments.length}.yaml`;
-    
     a.download = filename;
     document.body.appendChild(a);
     a.click();
@@ -193,6 +204,12 @@ function App() {
   };
 
   const getPreviewYaml = () => {
+    if (sidebarMode === 'namespaces') {
+      // Show namespace YAML
+      return generateNamespaceYaml(namespaces);
+    }
+
+    // Show deployment YAML
     if (deployments.length === 0) {
       return `# Welcome to Kube Composer!
 # 
@@ -283,6 +300,7 @@ spec:
   ];
 
   const hasValidDeployments = deployments.some(d => d.appName);
+  const hasCustomNamespaces = namespaces.some(ns => !['default', 'kube-system', 'kube-public', 'kube-node-lease'].includes(ns.name));
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -353,9 +371,13 @@ spec:
               </button>
               <button
                 onClick={handleDownload}
-                disabled={!hasValidDeployments}
+                disabled={sidebarMode === 'deployments' ? !hasValidDeployments : !hasCustomNamespaces}
                 className="inline-flex items-center px-2 sm:px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 text-sm"
-                title={hasValidDeployments ? 'Download all deployments as YAML' : 'No valid deployments to download'}
+                title={
+                  sidebarMode === 'deployments' 
+                    ? (hasValidDeployments ? 'Download all deployments as YAML' : 'No valid deployments to download')
+                    : (hasCustomNamespaces ? 'Download custom namespaces as YAML' : 'No custom namespaces to download')
+                }
               >
                 <Download className="w-4 h-4 sm:mr-1" />
                 <span className="hidden sm:inline">Download YAML</span>
@@ -469,9 +491,14 @@ spec:
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
               <h2 className="text-lg font-semibold text-gray-900">
                 Preview
-                {previewMode === 'yaml' && deployments.length > 1 && (
+                {previewMode === 'yaml' && sidebarMode === 'deployments' && deployments.length > 1 && (
                   <span className="ml-2 text-sm font-normal text-gray-500">
                     (All {deployments.filter(d => d.appName).length} deployments)
+                  </span>
+                )}
+                {previewMode === 'yaml' && sidebarMode === 'namespaces' && namespaces.length > 1 && (
+                  <span className="ml-2 text-sm font-normal text-gray-500">
+                    (Custom namespaces)
                   </span>
                 )}
               </h2>
@@ -502,9 +529,82 @@ spec:
           {/* Preview Content */}
           <div className="flex-1 overflow-y-auto bg-gray-50">
             <div className="p-4 sm:p-6 pb-8">
-              {previewMode === 'visual' && <ArchitecturePreview deployments={deployments} />}
+              {previewMode === 'visual' && sidebarMode === 'deployments' && <ArchitecturePreview deployments={deployments} />}
+              {previewMode === 'visual' && sidebarMode === 'namespaces' && (
+                <div className="text-center py-16 bg-gradient-to-br from-purple-50 to-indigo-100 rounded-xl border border-purple-200">
+                  <div className="max-w-md mx-auto">
+                    <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <Database className="w-10 h-10 text-purple-600" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">Namespace Overview</h3>
+                    <p className="text-gray-600 mb-6">
+                      You have {namespaces.length} namespace{namespaces.length !== 1 ? 's' : ''} configured. 
+                      Switch to YAML view to see the namespace configuration.
+                    </p>
+                    <div className="bg-white/60 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+                      <p className="text-sm text-gray-500">
+                        Namespaces help organize and isolate your Kubernetes resources. 
+                        Use the YAML view to see the generated namespace configuration.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
               {previewMode === 'yaml' && <YamlPreview yaml={getPreviewYaml()} />}
-              {previewMode === 'summary' && <ResourceSummary config={currentConfig} />}
+              {previewMode === 'summary' && sidebarMode === 'deployments' && <ResourceSummary config={currentConfig} />}
+              {previewMode === 'summary' && sidebarMode === 'namespaces' && (
+                <div className="space-y-6">
+                  <h3 className="text-lg font-semibold text-gray-900">Namespace Summary</h3>
+                  
+                  <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+                    <div className="flex items-center space-x-3 mb-4">
+                      <Database className="w-6 h-6 text-purple-600" />
+                      <div>
+                        <h4 className="font-semibold text-gray-900">{currentNamespace.name}</h4>
+                        <p className="text-sm text-gray-500">
+                          Created: {new Date(currentNamespace.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+
+                    {Object.keys(currentNamespace.labels).length > 0 && (
+                      <div className="mb-4">
+                        <h5 className="text-sm font-medium text-gray-700 mb-2">Labels:</h5>
+                        <div className="flex flex-wrap gap-2">
+                          {Object.entries(currentNamespace.labels).map(([key, value]) => (
+                            <span key={key} className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm">
+                              {key}: {value}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {Object.keys(currentNamespace.annotations).length > 0 && (
+                      <div className="mb-4">
+                        <h5 className="text-sm font-medium text-gray-700 mb-2">Annotations:</h5>
+                        <div className="flex flex-wrap gap-2">
+                          {Object.entries(currentNamespace.annotations).map(([key, value]) => (
+                            <span key={key} className="px-2 py-1 bg-purple-100 text-purple-800 rounded text-sm">
+                              {key}: {value}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="text-sm text-gray-600">
+                      <p>
+                        This namespace contains{' '}
+                        <strong>
+                          {deployments.filter(d => d.namespace === currentNamespace.name).length}
+                        </strong>{' '}
+                        deployment{deployments.filter(d => d.namespace === currentNamespace.name).length !== 1 ? 's' : ''}.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
