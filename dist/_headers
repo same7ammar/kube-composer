@@ -1,0 +1,20 @@
+/*
+  Content-Type: text/html; charset=utf-8
+
+/assets/*.js
+  Content-Type: application/javascript; charset=utf-8
+
+/assets/*.css
+  Content-Type: text/css; charset=utf-8
+
+/assets/*.svg
+  Content-Type: image/svg+xml; charset=utf-8
+
+/assets/*.png
+  Content-Type: image/png
+
+/assets/*.jpg
+  Content-Type: image/jpeg
+
+/assets/*.ico
+  Content-Type: image/x-icon
