@@ -12,7 +12,7 @@ export function useUsageCounter() {
     totalGenerations: 1247, // Starting with a reasonable number
     lastUpdated: new Date().toISOString()
   });
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Check if localStorage is available
   const isLocalStorageAvailable = () => {
@@ -23,14 +23,48 @@ export function useUsageCounter() {
     }
   };
 
-  // Load initial stats from localStorage
+  // Load initial stats from Supabase
   useEffect(() => {
-    setIsLoading(true);
     loadStats();
-    setIsLoading(false);
   }, []);
 
-  const loadStats = () => {
+  const loadStats = async () => {
+    setIsLoading(true);
+    try {
+      // Try to load from Supabase first
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/increment-downloads`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const newStats = {
+          totalGenerations: data.total_downloads || 1247,
+          lastUpdated: data.last_updated || new Date().toISOString()
+        };
+        setStats(newStats);
+        
+        // Cache in localStorage
+        if (isLocalStorageAvailable()) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(newStats));
+        }
+      } else {
+        // Fallback to localStorage
+        loadFromLocalStorage();
+      }
+    } catch (error) {
+      console.log('Could not load stats from Supabase, using localStorage:', error);
+      loadFromLocalStorage();
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadFromLocalStorage = () => {
     if (!isLocalStorageAvailable()) {
       return;
     }
@@ -42,28 +76,55 @@ export function useUsageCounter() {
         setStats(parsed);
       }
     } catch (error) {
-      console.log('Could not load usage stats:', error);
+      console.log('Could not load usage stats from localStorage:', error);
     }
   };
 
   const incrementCounter = async () => {
-    setIsLoading(true);
     try {
-      // Increment local counter
-      const newStats = {
+      // Optimistically update UI
+      const optimisticStats = {
         totalGenerations: stats.totalGenerations + 1,
         lastUpdated: new Date().toISOString()
       };
-      setStats(newStats);
-      
-      // Only save to localStorage if available
-      if (isLocalStorageAvailable()) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(newStats));
+      setStats(optimisticStats);
+
+      // Try to increment in Supabase
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/increment-downloads`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const newStats = {
+          totalGenerations: data.total_downloads,
+          lastUpdated: data.last_updated
+        };
+        setStats(newStats);
+        
+        // Update localStorage
+        if (isLocalStorageAvailable()) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(newStats));
+        }
+      } else {
+        // If Supabase fails, keep the optimistic update and save to localStorage
+        if (isLocalStorageAvailable()) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(optimisticStats));
+        }
       }
     } catch (error) {
-      console.log('Could not increment usage counter:', error);
-    } finally {
-      setIsLoading(false);
+      console.log('Could not increment usage counter in Supabase:', error);
+      // Keep the optimistic update and save to localStorage
+      if (isLocalStorageAvailable()) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          totalGenerations: stats.totalGenerations + 1,
+          lastUpdated: new Date().toISOString()
+        }));
+      }
     }
   };
 
