@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Share2, Twitter, Facebook, Linkedin, Link, Check } from 'lucide-react';
+import { Share2, Twitter, Facebook, Linkedin, Link, Check, Star, Github } from 'lucide-react';
 
 interface SocialShareProps {
   className?: string;
@@ -43,6 +43,22 @@ export function SocialShare({ className = '' }: SocialShareProps) {
   return (
     <div className={`flex items-center space-x-1 ${className}`}>
       <span className="text-xs font-medium text-gray-600 hidden sm:inline">Share:</span>
+      
+      {/* Enhanced GitHub Star Button */}
+      <a
+        href="https://github.com/same7ammar/kube-composer"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group inline-flex items-center space-x-2 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-all duration-200 text-xs font-medium shadow-md hover:shadow-lg transform hover:scale-105"
+        title="Star on GitHub"
+        aria-label="Star Kube Composer on GitHub"
+      >
+        <div className="flex items-center space-x-1">
+          <Github className="w-4 h-4 group-hover:scale-110 transition-transform duration-200" />
+          <Star className="w-4 h-4 text-yellow-400 group-hover:text-yellow-300 group-hover:scale-110 transition-all duration-200" />
+        </div>
+        <span className="hidden sm:inline group-hover:text-yellow-100 transition-colors duration-200">Star</span>
+      </a>
       
       {/* Native Share (mobile) */}
       {typeof navigator.share === 'function' && (

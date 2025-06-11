@@ -90,7 +90,7 @@ export function YamlPreview({ yaml }: YamlPreviewProps) {
       // String values (quoted)
       remainingLine = remainingLine.replace(
         /"([^"]*)"/g,
-        (match, content) => {
+        (_, content) => {
           parts.push(<span key={`${lineIndex}-string-${partIndex++}`} className="text-green-300">"{content}"</span>);
           return '';
         }
@@ -98,7 +98,7 @@ export function YamlPreview({ yaml }: YamlPreviewProps) {
       
       remainingLine = remainingLine.replace(
         /'([^']*)'/g,
-        (match, content) => {
+        (_, content) => {
           parts.push(<span key={`${lineIndex}-string2-${partIndex++}`} className="text-green-300">'{content}'</span>);
           return '';
         }
