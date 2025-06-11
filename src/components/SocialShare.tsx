@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Share2, Twitter, Facebook, Linkedin, Link, Check } from 'lucide-react';
 
 interface SocialShareProps {
@@ -45,7 +45,7 @@ export function SocialShare({ className = '' }: SocialShareProps) {
       <span className="text-xs font-medium text-gray-600 hidden sm:inline">Share:</span>
       
       {/* Native Share (mobile) */}
-      {navigator.share && (
+      {typeof navigator.share === 'function' && (
         <button
           onClick={handleNativeShare}
           className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200"
