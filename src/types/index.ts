@@ -29,4 +29,5 @@ export interface KubernetesResource {
   };
   spec?: any;
   data?: Record<string, string>;
+  type?: string;
 }
