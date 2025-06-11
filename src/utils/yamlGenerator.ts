@@ -260,9 +260,6 @@ data:
 
   const allResources: string[] = [];
 
-  // Get unique namespaces used by deployments (excluding 'default')
-  const usedNamespaces = [...new Set(deployments.map(d => d.namespace))].filter(ns => ns !== 'default');
-  
   // Get custom namespaces (excluding system namespaces)
   const customNamespaces = namespaces.filter(ns => 
     !['default', 'kube-system', 'kube-public', 'kube-node-lease'].includes(ns.name)
