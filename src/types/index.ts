@@ -18,6 +18,13 @@ export interface DeploymentConfig {
   secrets: Array<{ name: string; data: Record<string, string> }>;
 }
 
+export interface Namespace {
+  name: string;
+  labels: Record<string, string>;
+  annotations: Record<string, string>;
+  createdAt: string;
+}
+
 export interface KubernetesResource {
   apiVersion: string;
   kind: string;

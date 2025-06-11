@@ -1,4 +1,4 @@
-import type { DeploymentConfig, KubernetesResource } from '../types';
+import type { DeploymentConfig, KubernetesResource, Namespace } from '../types';
 
 export function generateKubernetesYaml(config: DeploymentConfig): string {
   if (!config.appName) {
@@ -162,7 +162,7 @@ export function generateKubernetesYaml(config: DeploymentConfig): string {
   }).join('\n---\n');
 }
 
-export function generateMultiDeploymentYaml(deployments: DeploymentConfig[]): string {
+export function generateMultiDeploymentYaml(deployments: DeploymentConfig[], namespaces: Namespace[] = []): string {
   if (deployments.length === 0) {
     return '# No deployments configured';
   }
@@ -177,10 +177,35 @@ export function generateMultiDeploymentYaml(deployments: DeploymentConfig[]): st
     allResources.push('');
   }
 
+  // Get unique namespaces used by deployments (excluding 'default')
+  const usedNamespaces = [...new Set(deployments.map(d => d.namespace))].filter(ns => ns !== 'default');
+  
+  // Generate namespace resources for custom namespaces
+  if (usedNamespaces.length > 0) {
+    allResources.push('# === NAMESPACES ===');
+    usedNamespaces.forEach(namespaceName => {
+      const namespaceConfig = namespaces.find(ns => ns.name === namespaceName);
+      if (namespaceConfig) {
+        const namespaceResource: KubernetesResource = {
+          apiVersion: 'v1',
+          kind: 'Namespace',
+          metadata: {
+            name: namespaceName,
+            ...(Object.keys(namespaceConfig.labels).length > 0 && { labels: namespaceConfig.labels }),
+            ...(Object.keys(namespaceConfig.annotations).length > 0 && { annotations: namespaceConfig.annotations })
+          }
+        };
+        allResources.push(objectToYaml(namespaceResource));
+        allResources.push('---');
+      }
+    });
+    allResources.push('');
+  }
+
   // Generate YAML for each deployment
   deployments.forEach((deployment, index) => {
     if (deployment.appName) {
-      if (index > 0) {
+      if (index > 0 || usedNamespaces.length > 0) {
         allResources.push(''); // Add spacing between deployments
       }
       

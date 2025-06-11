@@ -1,23 +1,33 @@
 import { useState } from 'react';
-import { Download, Eye, FileText, List, Plus, Menu, X, Star } from 'lucide-react';
+import { Download, Eye, FileText, List, Plus, Menu, X, Star, Database } from 'lucide-react';
 import { DeploymentForm } from './components/DeploymentForm';
 import { YamlPreview } from './components/YamlPreview';
 import { ResourceSummary } from './components/ResourceSummary';
 import { DeploymentsList } from './components/DeploymentsList';
 import { ArchitecturePreview } from './components/ArchitecturePreview';
+import { NamespaceManager } from './components/NamespaceManager';
 import { Footer } from './components/Footer';
 import { SocialShare } from './components/SocialShare';
 import { SEOHead } from './components/SEOHead';
 import { generateMultiDeploymentYaml } from './utils/yamlGenerator';
-import type { DeploymentConfig } from './types';
+import type { DeploymentConfig, Namespace } from './types';
 
 type PreviewMode = 'visual' | 'yaml' | 'summary';
 
 function App() {
   const [deployments, setDeployments] = useState<DeploymentConfig[]>([]);
+  const [namespaces, setNamespaces] = useState<Namespace[]>([
+    {
+      name: 'default',
+      labels: {},
+      annotations: {},
+      createdAt: new Date().toISOString()
+    }
+  ]);
   const [selectedDeployment, setSelectedDeployment] = useState<number>(0);
   const [previewMode, setPreviewMode] = useState<PreviewMode>('visual');
   const [showForm, setShowForm] = useState(false);
+  const [showNamespaceManager, setShowNamespaceManager] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const currentConfig = deployments[selectedDeployment] || {
@@ -105,6 +115,25 @@ function App() {
     setSelectedDeployment(index + 1);
   };
 
+  const handleAddNamespace = (namespace: Namespace) => {
+    setNamespaces([...namespaces, namespace]);
+  };
+
+  const handleDeleteNamespace = (namespaceName: string) => {
+    // Don't allow deletion of default namespace
+    if (namespaceName === 'default') return;
+    
+    // Update deployments that use this namespace to use 'default'
+    const updatedDeployments = deployments.map(deployment => 
+      deployment.namespace === namespaceName 
+        ? { ...deployment, namespace: 'default' }
+        : deployment
+    );
+    
+    setDeployments(updatedDeployments);
+    setNamespaces(namespaces.filter(ns => ns.name !== namespaceName));
+  };
+
   const handleDownload = async () => {
     if (deployments.length === 0) {
       return;
@@ -116,7 +145,7 @@ function App() {
       return;
     }
     
-    const yaml = generateMultiDeploymentYaml(validDeployments);
+    const yaml = generateMultiDeploymentYaml(validDeployments, namespaces);
     const blob = new Blob([yaml], { type: 'text/yaml' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -216,7 +245,7 @@ spec:
         - containerPort: 80`;
     }
     
-    return generateMultiDeploymentYaml(validDeployments);
+    return generateMultiDeploymentYaml(validDeployments, namespaces);
   };
 
   const previewModes = [
@@ -265,6 +294,10 @@ spec:
                   <FileText className="w-4 h-4" />
                   <span>{deployments.length} deployment{deployments.length !== 1 ? 's' : ''}</span>
                 </div>
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <Database className="w-4 h-4" />
+                  <span>{namespaces.length} namespace{namespaces.length !== 1 ? 's' : ''}</span>
+                </div>
                 <SocialShare />
               </div>
               
@@ -278,6 +311,14 @@ spec:
                 <Star className="w-4 h-4 sm:mr-1" />
                 <span className="hidden sm:inline">Star</span>
               </a>
+              
+              <button
+                onClick={() => setShowNamespaceManager(true)}
+                className="inline-flex items-center px-2 sm:px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200 text-sm"
+              >
+                <Database className="w-4 h-4 sm:mr-1" />
+                <span className="hidden sm:inline">Namespaces</span>
+              </button>
               
               <button
                 onClick={handleAddDeployment}
@@ -406,6 +447,16 @@ spec:
       {/* Footer */}
       <Footer />
 
+      {/* Namespace Manager Modal */}
+      {showNamespaceManager && (
+        <NamespaceManager
+          namespaces={namespaces}
+          onAddNamespace={handleAddNamespace}
+          onDeleteNamespace={handleDeleteNamespace}
+          onClose={() => setShowNamespaceManager(false)}
+        />
+      )}
+
       {/* Deployment Form Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -425,7 +476,11 @@ spec:
             
             {/* Modal Content */}
             <div className="flex-1 overflow-y-auto p-6">
-              <DeploymentForm config={currentConfig} onChange={handleConfigChange} />
+              <DeploymentForm 
+                config={currentConfig} 
+                onChange={handleConfigChange}
+                availableNamespaces={namespaces.map(ns => ns.name)}
+              />
             </div>
             
             {/* Modal Footer */}
