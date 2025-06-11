@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Database, Server, Globe, Info, ChevronDown, ChevronUp, Activity, Cpu, HardDrive, Network, Eye, EyeOff } from 'lucide-react';
 import type { DeploymentConfig } from '../types';
 
@@ -15,7 +15,6 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
   const totalPods = validDeployments.reduce((sum, d) => sum + d.replicas, 0);
   const totalServices = validDeployments.length;
   const totalConfigMaps = validDeployments.reduce((sum, d) => sum + d.configMaps.length, 0);
-  const totalSecrets = validDeployments.reduce((sum, d) => sum + d.secrets.length, 0);
 
   const namespaces = [...new Set(validDeployments.map(d => d.namespace))];
 
