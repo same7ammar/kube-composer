@@ -7,7 +7,16 @@ export default defineConfig({
   base: '/kube-composer/',
   build: {
     outDir: 'dist',
-    sourcemap: true,
-    assetsDir: 'assets'
+    sourcemap: false,
+    assetsDir: 'assets',
+    rollupOptions: {
+      output: {
+        manualChunks: undefined,
+      },
+    },
+  },
+  server: {
+    port: 5173,
+    host: true
   }
 })
