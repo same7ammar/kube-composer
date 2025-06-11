@@ -14,6 +14,15 @@ export function useUsageCounter() {
   });
   const [isLoading, setIsLoading] = useState(false);
 
+  // Check if localStorage is available
+  const isLocalStorageAvailable = () => {
+    try {
+      return typeof window !== 'undefined' && window.localStorage !== undefined;
+    } catch {
+      return false;
+    }
+  };
+
   // Load initial stats from localStorage
   useEffect(() => {
     setIsLoading(true);
@@ -22,6 +31,10 @@ export function useUsageCounter() {
   }, []);
 
   const loadStats = () => {
+    if (!isLocalStorageAvailable()) {
+      return;
+    }
+
     try {
       const localStats = localStorage.getItem(STORAGE_KEY);
       if (localStats) {
@@ -42,7 +55,11 @@ export function useUsageCounter() {
         lastUpdated: new Date().toISOString()
       };
       setStats(newStats);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newStats));
+      
+      // Only save to localStorage if available
+      if (isLocalStorageAvailable()) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(newStats));
+      }
     } catch (error) {
       console.log('Could not increment usage counter:', error);
     } finally {
