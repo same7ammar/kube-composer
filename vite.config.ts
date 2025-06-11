@@ -7,6 +7,7 @@ export default defineConfig({
   base: '/kube-composer/',
   build: {
     outDir: 'dist',
-    sourcemap: true
+    sourcemap: true,
+    assetsDir: 'assets'
   }
 })
