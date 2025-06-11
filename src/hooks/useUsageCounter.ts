@@ -31,29 +31,38 @@ export function useUsageCounter() {
   const loadStats = async () => {
     setIsLoading(true);
     try {
-      // Try to load from Supabase first
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/increment-downloads`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      // Check if environment variables are available
+      const supabaseUrl = import.meta.env?.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env?.VITE_SUPABASE_ANON_KEY;
+      
+      if (supabaseUrl && supabaseKey) {
+        // Try to load from Supabase first
+        const response = await fetch(`${supabaseUrl}/functions/v1/increment-downloads`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json',
+          },
+        });
 
-      if (response.ok) {
-        const data = await response.json();
-        const newStats = {
-          totalGenerations: data.total_downloads || 1247,
-          lastUpdated: data.last_updated || new Date().toISOString()
-        };
-        setStats(newStats);
-        
-        // Cache in localStorage
-        if (isLocalStorageAvailable()) {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(newStats));
+        if (response.ok) {
+          const data = await response.json();
+          const newStats = {
+            totalGenerations: data.total_downloads || 1247,
+            lastUpdated: data.last_updated || new Date().toISOString()
+          };
+          setStats(newStats);
+          
+          // Cache in localStorage
+          if (isLocalStorageAvailable()) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(newStats));
+          }
+        } else {
+          // Fallback to localStorage
+          loadFromLocalStorage();
         }
       } else {
-        // Fallback to localStorage
+        // No Supabase config, use localStorage
         loadFromLocalStorage();
       }
     } catch (error) {
@@ -89,29 +98,40 @@ export function useUsageCounter() {
       };
       setStats(optimisticStats);
 
-      // Try to increment in Supabase
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/increment-downloads`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      // Check if environment variables are available
+      const supabaseUrl = import.meta.env?.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env?.VITE_SUPABASE_ANON_KEY;
+      
+      if (supabaseUrl && supabaseKey) {
+        // Try to increment in Supabase
+        const response = await fetch(`${supabaseUrl}/functions/v1/increment-downloads`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json',
+          },
+        });
 
-      if (response.ok) {
-        const data = await response.json();
-        const newStats = {
-          totalGenerations: data.total_downloads,
-          lastUpdated: data.last_updated
-        };
-        setStats(newStats);
-        
-        // Update localStorage
-        if (isLocalStorageAvailable()) {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(newStats));
+        if (response.ok) {
+          const data = await response.json();
+          const newStats = {
+            totalGenerations: data.total_downloads,
+            lastUpdated: data.last_updated
+          };
+          setStats(newStats);
+          
+          // Update localStorage
+          if (isLocalStorageAvailable()) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(newStats));
+          }
+        } else {
+          // If Supabase fails, keep the optimistic update and save to localStorage
+          if (isLocalStorageAvailable()) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(optimisticStats));
+          }
         }
       } else {
-        // If Supabase fails, keep the optimistic update and save to localStorage
+        // No Supabase config, just save to localStorage
         if (isLocalStorageAvailable()) {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(optimisticStats));
         }
