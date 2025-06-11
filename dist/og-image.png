@@ -1,0 +1,104 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e40af"/>
+      <stop offset="50%" style="stop-color:#2563eb"/>
+      <stop offset="100%" style="stop-color:#3b82f6"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bgGradient)"/>
+  
+  <!-- Grid Pattern -->
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+  
+  <!-- Left Side - Logo and Title -->
+  <g transform="translate(80, 150)">
+    <!-- Logo -->
+    <rect x="0" y="0" width="120" height="120" fill="white" rx="20" filter="url(#glow)"/>
+    <g transform="translate(20, 30)">
+      <rect x="0" y="20" width="80" height="6" fill="#2563eb" rx="3"/>
+      <rect x="0" y="32" width="60" height="6" fill="#2563eb" rx="3"/>
+      <rect x="0" y="44" width="40" height="6" fill="#2563eb" rx="3"/>
+      <rect x="0" y="56" width="50" height="6" fill="#2563eb" rx="3"/>
+      <circle cx="70" cy="10" r="8" fill="#10b981"/>
+      <path d="M66 10l3 3 6-6" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
+    </g>
+    
+    <!-- Title -->
+    <text x="150" y="50" fill="white" font-family="Arial, sans-serif" font-size="48" font-weight="bold">Kube Composer</text>
+    <text x="150" y="85" fill="#93c5fd" font-family="Arial, sans-serif" font-size="24">Free Kubernetes YAML Generator</text>
+    
+    <!-- Features -->
+    <g transform="translate(0, 160)">
+      <text x="0" y="0" fill="white" font-family="Arial, sans-serif" font-size="20" font-weight="600">✨ Visual Deployment Editor</text>
+      <text x="0" y="35" fill="white" font-family="Arial, sans-serif" font-size="20" font-weight="600">🚀 Real-time YAML Generation</text>
+      <text x="0" y="70" fill="white" font-family="Arial, sans-serif" font-size="20" font-weight="600">📦 Multi-Deployment Support</text>
+      <text x="0" y="105" fill="white" font-family="Arial, sans-serif" font-size="20" font-weight="600">💾 Production-Ready Export</text>
+    </g>
+  </g>
+  
+  <!-- Right Side - Code Preview -->
+  <g transform="translate(650, 100)">
+    <rect x="0" y="0" width="480" height="400" fill="rgba(0,0,0,0.8)" rx="12" filter="url(#glow)"/>
+    <rect x="0" y="0" width="480" height="40" fill="rgba(255,255,255,0.1)" rx="12"/>
+    <circle cx="20" cy="20" r="6" fill="#ff5f56"/>
+    <circle cx="40" cy="20" r="6" fill="#ffbd2e"/>
+    <circle cx="60" cy="20" r="6" fill="#27ca3f"/>
+    <text x="90" y="26" fill="white" font-family="monospace" font-size="14">deployment.yaml</text>
+    
+    <!-- YAML Code -->
+    <g transform="translate(20, 60)" font-family="monospace" font-size="12">
+      <text x="0" y="0" fill="#569cd6">apiVersion:</text>
+      <text x="80" y="0" fill="white">apps/v1</text>
+      
+      <text x="0" y="20" fill="#569cd6">kind:</text>
+      <text x="40" y="20" fill="white">Deployment</text>
+      
+      <text x="0" y="40" fill="#569cd6">metadata:</text>
+      <text x="20" y="60" fill="#569cd6">name:</text>
+      <text x="60" y="60" fill="white">my-app</text>
+      
+      <text x="0" y="80" fill="#569cd6">spec:</text>
+      <text x="20" y="100" fill="#569cd6">replicas:</text>
+      <text x="80" y="100" fill="#b5cea8">3</text>
+      
+      <text x="20" y="120" fill="#569cd6">selector:</text>
+      <text x="40" y="140" fill="#569cd6">matchLabels:</text>
+      <text x="60" y="160" fill="#569cd6">app:</text>
+      <text x="90" y="160" fill="white">my-app</text>
+      
+      <text x="20" y="180" fill="#569cd6">template:</text>
+      <text x="40" y="200" fill="#569cd6">metadata:</text>
+      <text x="60" y="220" fill="#569cd6">labels:</text>
+      <text x="80" y="240" fill="#569cd6">app:</text>
+      <text x="110" y="240" fill="white">my-app</text>
+      
+      <text x="40" y="260" fill="#569cd6">spec:</text>
+      <text x="60" y="280" fill="#569cd6">containers:</text>
+      <text x="80" y="300" fill="white">- name: my-app</text>
+      <text x="100" y="320" fill="#569cd6">image:</text>
+      <text x="140" y="320" fill="white">nginx:latest</text>
+    </g>
+  </g>
+  
+  <!-- Bottom CTA -->
+  <g transform="translate(0, 550)">
+    <rect x="0" y="0" width="1200" height="80" fill="rgba(0,0,0,0.3)"/>
+    <text x="600" y="35" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="24" font-weight="bold">Generate Your First Kubernetes Deployment in Minutes!</text>
+    <text x="600" y="60" text-anchor="middle" fill="#93c5fd" font-family="Arial, sans-serif" font-size="18">🌐 kube-composer.com - No Registration Required</text>
+  </g>
+</svg>

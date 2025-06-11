@@ -1,0 +1,24 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg512" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2563eb"/>
+      <stop offset="100%" style="stop-color:#1d4ed8"/>
+    </linearGradient>
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="rgba(0,0,0,0.3)"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg512)" rx="80"/>
+  <g transform="translate(80, 120)" filter="url(#shadow)">
+    <rect x="0" y="40" width="352" height="24" fill="white" rx="12"/>
+    <rect x="0" y="80" width="264" height="24" fill="white" rx="12"/>
+    <rect x="0" y="120" width="176" height="24" fill="white" rx="12"/>
+    <rect x="0" y="160" width="220" height="24" fill="white" rx="12"/>
+    <rect x="0" y="200" width="308" height="24" fill="white" rx="12"/>
+    <circle cx="308" cy="32" r="32" fill="#10b981"/>
+    <path d="M288 32l16 16 24-24" stroke="white" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="256" y="360" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="48" font-weight="bold">KUBE</text>
+  <text x="256" y="400" text-anchor="middle" fill="#93c5fd" font-family="Arial, sans-serif" font-size="32">COMPOSER</text>
+  <text x="256" y="440" text-anchor="middle" fill="#93c5fd" font-family="Arial, sans-serif" font-size="20">YAML Generator</text>
+</svg>

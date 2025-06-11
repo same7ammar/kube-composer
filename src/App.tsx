@@ -6,9 +6,9 @@ import { ResourceSummary } from './components/ResourceSummary';
 import { DeploymentsList } from './components/DeploymentsList';
 import { ArchitecturePreview } from './components/ArchitecturePreview';
 import { Footer } from './components/Footer';
-import { UsageCounter } from './components/UsageCounter';
+import { SocialShare } from './components/SocialShare';
+import { SEOHead } from './components/SEOHead';
 import { generateMultiDeploymentYaml } from './utils/yamlGenerator';
-import { useUsageCounter } from './hooks/useUsageCounter';
 import type { DeploymentConfig } from './types';
 
 type PreviewMode = 'visual' | 'yaml' | 'summary';
@@ -19,8 +19,6 @@ function App() {
   const [previewMode, setPreviewMode] = useState<PreviewMode>('visual');
   const [showForm, setShowForm] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  
-  const { incrementCounter } = useUsageCounter();
 
   const currentConfig = deployments[selectedDeployment] || {
     appName: '',
@@ -118,9 +116,6 @@ function App() {
       return;
     }
     
-    // Increment usage counter
-    await incrementCounter();
-    
     const yaml = generateMultiDeploymentYaml(validDeployments);
     const blob = new Blob([yaml], { type: 'text/yaml' });
     const url = URL.createObjectURL(blob);
@@ -164,6 +159,9 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* SEO Head Component */}
+      <SEOHead />
+      
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="px-4 sm:px-6 lg:px-8 py-4">
@@ -196,7 +194,7 @@ function App() {
                   <FileText className="w-4 h-4" />
                   <span>{deployments.length} deployment{deployments.length !== 1 ? 's' : ''}</span>
                 </div>
-                <UsageCounter variant="compact" />
+                <SocialShare />
               </div>
               <button
                 onClick={handleAddDeployment}
@@ -321,17 +319,6 @@ function App() {
           </div>
         </div>
       </main>
-
-      {/* Usage Counter - Above Footer */}
-      <div className="bg-gray-50 px-4 sm:px-6 lg:px-8 py-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-6">
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Community Impact</h3>
-            <p className="text-gray-600">Join thousands of developers using Kube Composer to simplify Kubernetes deployments</p>
-          </div>
-          <UsageCounter variant="detailed" />
-        </div>
-      </div>
 
       {/* Footer */}
       <Footer />

@@ -1,0 +1,9 @@
+# Netlify redirects and rewrites
+/*    /index.html   200
+
+# Force HTTPS
+http://kube-composer.com/*    https://kube-composer.com/:splat    301!
+http://www.kube-composer.com/*    https://kube-composer.com/:splat    301!
+
+# Redirect www to non-www
+https://www.kube-composer.com/*    https://kube-composer.com/:splat    301!
