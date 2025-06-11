@@ -1,0 +1,189 @@
+<svg width="1440" height="900" viewBox="0 0 1440 900" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="screenBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f9fafb"/>
+      <stop offset="100%" style="stop-color:#f3f4f6"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Browser Window -->
+  <rect width="1440" height="900" fill="url(#screenBg)"/>
+  
+  <!-- Browser Header -->
+  <rect x="0" y="0" width="1440" height="60" fill="white" stroke="#e5e7eb"/>
+  <circle cx="30" cy="30" r="8" fill="#ff5f56"/>
+  <circle cx="55" cy="30" r="8" fill="#ffbd2e"/>
+  <circle cx="80" cy="30" r="8" fill="#27ca3f"/>
+  
+  <!-- URL Bar -->
+  <rect x="120" y="15" width="400" height="30" fill="#f3f4f6" rx="15"/>
+  <text x="140" y="33" fill="#6b7280" font-family="Arial, sans-serif" font-size="14">🔒 kube-composer.com</text>
+  
+  <!-- App Header -->
+  <rect x="0" y="60" width="1440" height="80" fill="white" stroke="#e5e7eb"/>
+  <g transform="translate(40, 85)">
+    <rect x="0" y="0" width="30" height="30" fill="#2563eb" rx="6"/>
+    <text x="8" y="20" fill="white" font-family="Arial, sans-serif" font-size="16">📄</text>
+    <text x="45" y="15" fill="#111827" font-family="Arial, sans-serif" font-size="20" font-weight="bold">Kube Composer</text>
+    <text x="45" y="30" fill="#6b7280" font-family="Arial, sans-serif" font-size="12">Kubernetes YAML Generator</text>
+  </g>
+  
+  <!-- Buttons -->
+  <g transform="translate(1200, 85)">
+    <rect x="0" y="0" width="100" height="30" fill="#10b981" rx="6"/>
+    <text x="50" y="20" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="12" font-weight="600">+ Add Deploy</text>
+    
+    <rect x="110" y="0" width="100" height="30" fill="#2563eb" rx="6"/>
+    <text x="160" y="20" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="12" font-weight="600">📥 Download</text>
+  </g>
+  
+  <!-- Sidebar -->
+  <rect x="0" y="140" width="300" height="760" fill="white" stroke="#e5e7eb"/>
+  <text x="20" y="170" fill="#111827" font-family="Arial, sans-serif" font-size="16" font-weight="600">Deployments</text>
+  
+  <!-- Deployment Items -->
+  <g transform="translate(20, 190)">
+    <rect x="0" y="0" width="260" height="60" fill="#eff6ff" stroke="#2563eb" rx="8"/>
+    <circle cx="20" cy="30" r="4" fill="#10b981"/>
+    <text x="35" y="25" fill="#111827" font-family="Arial, sans-serif" font-size="14" font-weight="600">my-web-app</text>
+    <text x="35" y="40" fill="#6b7280" font-family="Arial, sans-serif" font-size="12">nginx:latest</text>
+    
+    <rect x="0" y="70" width="260" height="60" fill="#f9fafb" stroke="#e5e7eb" rx="8"/>
+    <circle cx="20" cy="100" r="4" fill="#10b981"/>
+    <text x="35" y="95" fill="#111827" font-family="Arial, sans-serif" font-size="14" font-weight="600">api-service</text>
+    <text x="35" y="110" fill="#6b7280" font-family="Arial, sans-serif" font-size="12">node:18-alpine</text>
+    
+    <rect x="0" y="140" width="260" height="60" fill="#f9fafb" stroke="#e5e7eb" rx="8"/>
+    <circle cx="20" cy="170" r="4" fill="#10b981"/>
+    <text x="35" y="165" fill="#111827" font-family="Arial, sans-serif" font-size="14" font-weight="600">database</text>
+    <text x="35" y="180" fill="#6b7280" font-family="Arial, sans-serif" font-size="12">postgres:14</text>
+  </g>
+  
+  <!-- Main Content Area -->
+  <rect x="300" y="140" width="1140" height="760" fill="#f9fafb"/>
+  
+  <!-- Preview Header -->
+  <rect x="300" y="140" width="1140" height="60" fill="white" stroke="#e5e7eb"/>
+  <text x="320" y="175" fill="#111827" font-family="Arial, sans-serif" font-size="18" font-weight="600">Preview</text>
+  
+  <!-- Tab Buttons -->
+  <g transform="translate(800, 155)">
+    <rect x="0" y="0" width="80" height="30" fill="#eff6ff" stroke="#2563eb" rx="6"/>
+    <text x="40" y="20" text-anchor="middle" fill="#2563eb" font-family="Arial, sans-serif" font-size="12" font-weight="600">👁️ Visual</text>
+    
+    <rect x="90" y="0" width="80" height="30" fill="#f9fafb" stroke="#e5e7eb" rx="6"/>
+    <text x="130" y="20" text-anchor="middle" fill="#6b7280" font-family="Arial, sans-serif" font-size="12" font-weight="600">📋 Summary</text>
+    
+    <rect x="180" y="0" width="80" height="30" fill="#f9fafb" stroke="#e5e7eb" rx="6"/>
+    <text x="220" y="20" text-anchor="middle" fill="#6b7280" font-family="Arial, sans-serif" font-size="12" font-weight="600">📄 YAML</text>
+  </g>
+  
+  <!-- Architecture Preview -->
+  <g transform="translate(320, 220)">
+    <!-- Stats Header -->
+    <rect x="0" y="0" width="1100" height="100" fill="url(#screenBg)" rx="12"/>
+    <g transform="translate(40, 30)">
+      <text x="0" y="0" fill="#111827" font-family="Arial, sans-serif" font-size="20" font-weight="bold">Kubernetes Architecture</text>
+      <text x="0" y="20" fill="#6b7280" font-family="Arial, sans-serif" font-size="14">Real-time visualization of your deployment infrastructure</text>
+      
+      <!-- Stats -->
+      <g transform="translate(0, 40)">
+        <rect x="0" y="0" width="120" height="40" fill="rgba(37,99,235,0.1)" rx="8"/>
+        <text x="10" y="15" fill="#2563eb" font-family="Arial, sans-serif" font-size="12">📦 Deployments</text>
+        <text x="10" y="30" fill="#2563eb" font-family="Arial, sans-serif" font-size="18" font-weight="bold">3</text>
+        
+        <rect x="140" y="0" width="120" height="40" fill="rgba(16,185,129,0.1)" rx="8"/>
+        <text x="150" y="15" fill="#10b981" font-family="Arial, sans-serif" font-size="12">🚀 Pods</text>
+        <text x="150" y="30" fill="#10b981" font-family="Arial, sans-serif" font-size="18" font-weight="bold">7</text>
+        
+        <rect x="280" y="0" width="120" height="40" fill="rgba(168,85,247,0.1)" rx="8"/>
+        <text x="290" y="15" fill="#a855f7" font-family="Arial, sans-serif" font-size="12">🌐 Services</text>
+        <text x="290" y="30" fill="#a855f7" font-family="Arial, sans-serif" font-size="18" font-weight="bold">3</text>
+      </g>
+    </g>
+    
+    <!-- Deployment Visualization -->
+    <g transform="translate(0, 120)">
+      <!-- Namespace -->
+      <rect x="0" y="0" width="1100" height="400" fill="white" stroke="#e5e7eb" rx="12"/>
+      <rect x="0" y="0" width="1100" height="50" fill="#f8fafc" stroke="#e5e7eb" rx="12"/>
+      <text x="20" y="30" fill="#111827" font-family="Arial, sans-serif" font-size="16" font-weight="600">🗂️ Namespace: default</text>
+      
+      <!-- Deployment Cards -->
+      <g transform="translate(20, 70)">
+        <!-- Web App Deployment -->
+        <rect x="0" y="0" width="340" height="300" fill="#f8fafc" stroke="#e5e7eb" rx="8"/>
+        <rect x="0" y="0" width="340" height="40" fill="#eff6ff" stroke="#2563eb" rx="8"/>
+        <text x="15" y="25" fill="#2563eb" font-family="Arial, sans-serif" font-size="14" font-weight="600">🚀 my-web-app</text>
+        
+        <!-- Pods Grid -->
+        <g transform="translate(15, 50)">
+          <rect x="0" y="0" width="70" height="50" fill="#dcfce7" stroke="#16a34a" rx="6"/>
+          <text x="35" y="20" text-anchor="middle" fill="#16a34a" font-family="Arial, sans-serif" font-size="10">Pod 1</text>
+          <text x="35" y="35" text-anchor="middle" fill="#16a34a" font-family="Arial, sans-serif" font-size="8">Running</text>
+          
+          <rect x="80" y="0" width="70" height="50" fill="#dcfce7" stroke="#16a34a" rx="6"/>
+          <text x="115" y="20" text-anchor="middle" fill="#16a34a" font-family="Arial, sans-serif" font-size="10">Pod 2</text>
+          <text x="115" y="35" text-anchor="middle" fill="#16a34a" font-family="Arial, sans-serif" font-size="8">Running</text>
+          
+          <rect x="160" y="0" width="70" height="50" fill="#dcfce7" stroke="#16a34a" rx="6"/>
+          <text x="195" y="20" text-anchor="middle" fill="#16a34a" font-family="Arial, sans-serif" font-size="10">Pod 3</text>
+          <text x="195" y="35" text-anchor="middle" fill="#16a34a" font-family="Arial, sans-serif" font-size="8">Running</text>
+        </g>
+        
+        <!-- Service -->
+        <g transform="translate(15, 120)">
+          <rect x="0" y="0" width="310" height="60" fill="#f3e8ff" stroke="#a855f7" rx="6"/>
+          <text x="15" y="20" fill="#a855f7" font-family="Arial, sans-serif" font-size="12" font-weight="600">🌐 Service: LoadBalancer</text>
+          <text x="15" y="35" fill="#a855f7" font-family="Arial, sans-serif" font-size="10">Port: 80 → 8080</text>
+          <text x="15" y="50" fill="#a855f7" font-family="Arial, sans-serif" font-size="10">External IP: 203.0.113.1</text>
+        </g>
+        
+        <!-- Resources -->
+        <g transform="translate(15, 200)">
+          <rect x="0" y="0" width="150" height="80" fill="#fef3c7" stroke="#f59e0b" rx="6"/>
+          <text x="10" y="20" fill="#f59e0b" font-family="Arial, sans-serif" font-size="11" font-weight="600">💾 Resources</text>
+          <text x="10" y="35" fill="#f59e0b" font-family="Arial, sans-serif" font-size="9">CPU: 100m/500m</text>
+          <text x="10" y="50" fill="#f59e0b" font-family="Arial, sans-serif" font-size="9">Memory: 128Mi/256Mi</text>
+          <text x="10" y="65" fill="#f59e0b" font-family="Arial, sans-serif" font-size="9">Replicas: 3</text>
+          
+          <rect x="160" y="0" width="150" height="80" fill="#fecaca" stroke="#ef4444" rx="6"/>
+          <text x="170" y="20" fill="#ef4444" font-family="Arial, sans-serif" font-size="11" font-weight="600">🔧 Config</text>
+          <text x="170" y="35" fill="#ef4444" font-family="Arial, sans-serif" font-size="9">Env vars: 5</text>
+          <text x="170" y="50" fill="#ef4444" font-family="Arial, sans-serif" font-size="9">Volumes: 2</text>
+          <text x="170" y="65" fill="#ef4444" font-family="Arial, sans-serif" font-size="9">Secrets: 1</text>
+        </g>
+        
+        <!-- API Service -->
+        <g transform="translate(360, 0)">
+          <rect x="0" y="0" width="340" height="140" fill="#f8fafc" stroke="#e5e7eb" rx="8"/>
+          <rect x="0" y="0" width="340" height="40" fill="#eff6ff" stroke="#2563eb" rx="8"/>
+          <text x="15" y="25" fill="#2563eb" font-family="Arial, sans-serif" font-size="14" font-weight="600">⚡ api-service</text>
+          
+          <g transform="translate(15, 50)">
+            <rect x="0" y="0" width="70" height="50" fill="#dcfce7" stroke="#16a34a" rx="6"/>
+            <text x="35" y="20" text-anchor="middle" fill="#16a34a" font-family="Arial, sans-serif" font-size="10">Pod 1</text>
+            <text x="35" y="35" text-anchor="middle" fill="#16a34a" font-family="Arial, sans-serif" font-size="8">Running</text>
+            
+            <rect x="80" y="0" width="70" height="50" fill="#dcfce7" stroke="#16a34a" rx="6"/>
+            <text x="115" y="20" text-anchor="middle" fill="#16a34a" font-family="Arial, sans-serif" font-size="10">Pod 2</text>
+            <text x="115" y="35" text-anchor="middle" fill="#16a34a" font-family="Arial, sans-serif" font-size="8">Running</text>
+          </g>
+        </g>
+        
+        <!-- Database -->
+        <g transform="translate(720, 0)">
+          <rect x="0" y="0" width="340" height="140" fill="#f8fafc" stroke="#e5e7eb" rx="8"/>
+          <rect x="0" y="0" width="340" height="40" fill="#eff6ff" stroke="#2563eb" rx="8"/>
+          <text x="15" y="25" fill="#2563eb" font-family="Arial, sans-serif" font-size="14" font-weight="600">🗄️ database</text>
+          
+          <g transform="translate(15, 50)">
+            <rect x="0" y="0" width="70" height="50" fill="#dcfce7" stroke="#16a34a" rx="6"/>
+            <text x="35" y="20" text-anchor="middle" fill="#16a34a" font-family="Arial, sans-serif" font-size="10">Pod 1</text>
+            <text x="35" y="35" text-anchor="middle" fill="#16a34a" font-family="Arial, sans-serif" font-size="8">Running</text>
+          </g>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>
