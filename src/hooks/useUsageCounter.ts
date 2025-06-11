@@ -16,7 +16,9 @@ export function useUsageCounter() {
 
   // Load initial stats from localStorage
   useEffect(() => {
+    setIsLoading(true);
     loadStats();
+    setIsLoading(false);
   }, []);
 
   const loadStats = () => {
@@ -32,6 +34,7 @@ export function useUsageCounter() {
   };
 
   const incrementCounter = async () => {
+    setIsLoading(true);
     try {
       // Increment local counter
       const newStats = {
@@ -42,6 +45,8 @@ export function useUsageCounter() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(newStats));
     } catch (error) {
       console.log('Could not increment usage counter:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 

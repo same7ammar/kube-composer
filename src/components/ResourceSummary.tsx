@@ -1,4 +1,3 @@
-import React from 'react';
 import { Server, Globe, Database, Key, Settings, CheckCircle, AlertCircle } from 'lucide-react';
 import type { DeploymentConfig } from '../types';
 

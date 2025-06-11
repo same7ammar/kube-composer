@@ -1,4 +1,3 @@
-import React from 'react';
 import { Github, Heart, ExternalLink, FileText, Zap, Shield, Users } from 'lucide-react';
 
 export function Footer() {

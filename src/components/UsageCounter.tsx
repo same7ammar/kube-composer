@@ -1,4 +1,3 @@
-import React from 'react';
 import { TrendingUp, Download, Users, Zap } from 'lucide-react';
 import { useUsageCounter } from '../hooks/useUsageCounter';
 
