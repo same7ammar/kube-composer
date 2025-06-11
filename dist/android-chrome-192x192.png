@@ -1,0 +1,19 @@
+<svg width="192" height="192" viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg192" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2563eb"/>
+      <stop offset="100%" style="stop-color:#1d4ed8"/>
+    </linearGradient>
+  </defs>
+  <rect width="192" height="192" fill="url(#bg192)" rx="32"/>
+  <g transform="translate(32, 48)">
+    <rect x="0" y="20" width="128" height="10" fill="white" rx="5"/>
+    <rect x="0" y="38" width="96" height="10" fill="white" rx="5"/>
+    <rect x="0" y="56" width="64" height="10" fill="white" rx="5"/>
+    <rect x="0" y="74" width="80" height="10" fill="white" rx="5"/>
+    <circle cx="112" cy="16" r="14" fill="#10b981"/>
+    <path d="M105 16l5 5 10-10" stroke="white" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <text x="96" y="140" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="18" font-weight="bold">KUBE</text>
+  <text x="96" y="160" text-anchor="middle" fill="#93c5fd" font-family="Arial, sans-serif" font-size="14">COMPOSER</text>
+</svg>
