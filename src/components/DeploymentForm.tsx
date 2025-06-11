@@ -1,4 +1,3 @@
-import React from 'react';
 import { Plus, Minus, Server, Settings, Database, Key } from 'lucide-react';
 import type { DeploymentConfig } from '../types';
 

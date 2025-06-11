@@ -20,7 +20,7 @@ function App() {
   const [showForm, setShowForm] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
-  const { incrementCounter, stats } = useUsageCounter();
+  const { incrementCounter } = useUsageCounter();
 
   const currentConfig = deployments[selectedDeployment] || {
     appName: '',
