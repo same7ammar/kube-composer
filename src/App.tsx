@@ -1,23 +1,37 @@
 import { useState } from 'react';
-import { Download, Eye, FileText, List, Plus, Menu, X } from 'lucide-react';
+import { Download, Eye, FileText, List, Plus, Menu, X, Database } from 'lucide-react';
 import { DeploymentForm } from './components/DeploymentForm';
 import { YamlPreview } from './components/YamlPreview';
 import { ResourceSummary } from './components/ResourceSummary';
 import { DeploymentsList } from './components/DeploymentsList';
+import { NamespacesList } from './components/NamespacesList';
 import { ArchitecturePreview } from './components/ArchitecturePreview';
 import { Footer } from './components/Footer';
 import { SocialShare } from './components/SocialShare';
 import { SEOHead } from './components/SEOHead';
+import { NamespaceManager } from './components/NamespaceManager';
 import { generateMultiDeploymentYaml } from './utils/yamlGenerator';
-import type { DeploymentConfig } from './types';
+import type { DeploymentConfig, Namespace } from './types';
 
 type PreviewMode = 'visual' | 'yaml' | 'summary';
+type SidebarTab = 'deployments' | 'namespaces';
 
 function App() {
   const [deployments, setDeployments] = useState<DeploymentConfig[]>([]);
+  const [namespaces, setNamespaces] = useState<Namespace[]>([
+    {
+      name: 'default',
+      labels: {},
+      annotations: {},
+      createdAt: new Date().toISOString()
+    }
+  ]);
   const [selectedDeployment, setSelectedDeployment] = useState<number>(0);
+  const [selectedNamespace, setSelectedNamespace] = useState<number>(0);
   const [previewMode, setPreviewMode] = useState<PreviewMode>('visual');
+  const [sidebarTab, setSidebarTab] = useState<SidebarTab>('deployments');
   const [showForm, setShowForm] = useState(false);
+  const [showNamespaceManager, setShowNamespaceManager] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const currentConfig = deployments[selectedDeployment] || {
@@ -39,6 +53,12 @@ function App() {
     configMaps: [],
     secrets: []
   };
+
+  // Get available namespaces from all deployments
+  const availableNamespaces = [...new Set([
+    ...namespaces.map(ns => ns.name),
+    ...deployments.map(d => d.namespace).filter(Boolean)
+  ])];
 
   const handleConfigChange = (newConfig: DeploymentConfig) => {
     const newDeployments = [...deployments];
@@ -72,6 +92,7 @@ function App() {
     };
     setDeployments([...deployments, newDeployment]);
     setSelectedDeployment(deployments.length);
+    setSidebarTab('deployments');
     setShowForm(true);
   };
 
@@ -105,6 +126,51 @@ function App() {
     setSelectedDeployment(index + 1);
   };
 
+  const handleAddNamespace = (namespace: Namespace) => {
+    setNamespaces([...namespaces, namespace]);
+    setShowNamespaceManager(false);
+    setSidebarTab('namespaces');
+    setSelectedNamespace(namespaces.length);
+  };
+
+  const handleDeleteNamespace = (namespaceName: string) => {
+    // Don't allow deleting system namespaces
+    if (['default', 'kube-system', 'kube-public', 'kube-node-lease'].includes(namespaceName)) {
+      return;
+    }
+
+    // Remove the namespace
+    setNamespaces(namespaces.filter(ns => ns.name !== namespaceName));
+    
+    // Move any deployments using this namespace to 'default'
+    const updatedDeployments = deployments.map(deployment => 
+      deployment.namespace === namespaceName 
+        ? { ...deployment, namespace: 'default' }
+        : deployment
+    );
+    setDeployments(updatedDeployments);
+
+    // Adjust selected namespace index
+    const namespaceIndex = namespaces.findIndex(ns => ns.name === namespaceName);
+    if (selectedNamespace >= namespaceIndex) {
+      setSelectedNamespace(Math.max(0, selectedNamespace - 1));
+    }
+  };
+
+  const handleDuplicateNamespace = (index: number) => {
+    const namespaceToDuplicate = namespaces[index];
+    const duplicatedNamespace: Namespace = {
+      ...namespaceToDuplicate,
+      name: `${namespaceToDuplicate.name}-copy`,
+      createdAt: new Date().toISOString()
+    };
+    
+    const newNamespaces = [...namespaces];
+    newNamespaces.splice(index + 1, 0, duplicatedNamespace);
+    setNamespaces(newNamespaces);
+    setSelectedNamespace(index + 1);
+  };
+
   const handleDownload = async () => {
     if (deployments.length === 0) {
       return;
@@ -116,7 +182,7 @@ function App() {
       return;
     }
     
-    const yaml = generateMultiDeploymentYaml(validDeployments);
+    const yaml = generateMultiDeploymentYaml(validDeployments, namespaces);
     const blob = new Blob([yaml], { type: 'text/yaml' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -136,16 +202,12 @@ function App() {
 
   // Generate YAML for preview based on mode
   const getPreviewYaml = () => {
-    if (deployments.length === 0) {
+    if (deployments.length === 0 && namespaces.length <= 1) {
       return '# No deployments configured\n# Create your first deployment to see the generated YAML';
     }
     
     const validDeployments = deployments.filter(d => d.appName);
-    if (validDeployments.length === 0) {
-      return '# No valid deployments found\n# Please configure at least one deployment with an app name';
-    }
-    
-    return generateMultiDeploymentYaml(validDeployments);
+    return generateMultiDeploymentYaml(validDeployments, namespaces);
   };
 
   const previewModes = [
@@ -183,22 +245,43 @@ function App() {
                 <FileText className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-lg sm:text-xl font-semibold text-gray-900">Kube Composer</h1>
+                <a 
+                  href="https://kube-composer.com" 
+                  className="text-lg sm:text-xl font-semibold text-gray-900 hover:text-blue-600 transition-colors duration-200"
+                >
+                  Kube Composer
+                </a>
                 <p className="text-xs sm:text-sm text-gray-500 hidden sm:block">Kubernetes YAML Generator for developers</p>
               </div>
             </div>
             
-            <div className="flex items-center space-x-2 sm:space-x-3">
-              <div className="hidden sm:flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              {/* Stats - Hidden on mobile */}
+              <div className="hidden lg:flex items-center space-x-4">
                 <div className="flex items-center space-x-2 text-sm text-gray-600">
                   <FileText className="w-4 h-4" />
                   <span>{deployments.length} deployment{deployments.length !== 1 ? 's' : ''}</span>
                 </div>
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <Database className="w-4 h-4" />
+                  <span>{namespaces.length} namespace{namespaces.length !== 1 ? 's' : ''}</span>
+                </div>
                 <SocialShare />
               </div>
+              
+              {/* Action Buttons */}
+              <button
+                onClick={() => setShowNamespaceManager(true)}
+                className="inline-flex items-center px-2 sm:px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200 text-sm font-medium"
+                title="Manage Kubernetes namespaces"
+              >
+                <Database className="w-4 h-4 sm:mr-1" />
+                <span className="hidden sm:inline">Namespaces</span>
+              </button>
               <button
                 onClick={handleAddDeployment}
-                className="inline-flex items-center px-2 sm:px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 text-sm"
+                className="inline-flex items-center px-2 sm:px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 text-sm font-medium"
+                title="Add new deployment"
               >
                 <Plus className="w-4 h-4 sm:mr-1" />
                 <span className="hidden sm:inline">Add Deployment</span>
@@ -206,13 +289,28 @@ function App() {
               <button
                 onClick={handleDownload}
                 disabled={!hasValidDeployments}
-                className="inline-flex items-center px-2 sm:px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 text-sm"
+                className="inline-flex items-center px-2 sm:px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 text-sm font-medium"
                 title={hasValidDeployments ? 'Download all deployments as YAML' : 'No valid deployments to download'}
               >
                 <Download className="w-4 h-4 sm:mr-1" />
                 <span className="hidden sm:inline">Download YAML</span>
               </button>
             </div>
+          </div>
+          
+          {/* Mobile Stats Row */}
+          <div className="lg:hidden mt-3 flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <FileText className="w-4 h-4" />
+                <span>{deployments.length} deployment{deployments.length !== 1 ? 's' : ''}</span>
+              </div>
+              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <Database className="w-4 h-4" />
+                <span>{namespaces.length} namespace{namespaces.length !== 1 ? 's' : ''}</span>
+              </div>
+            </div>
+            <SocialShare />
           </div>
         </div>
       </header>
@@ -227,7 +325,7 @@ function App() {
           />
         )}
 
-        {/* Left Sidebar - Deployments List */}
+        {/* Left Sidebar - Tabbed Interface */}
         <div className={`
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
           lg:translate-x-0 fixed lg:relative inset-y-0 left-0 z-50 lg:z-auto
@@ -235,39 +333,79 @@ function App() {
           transition-transform duration-300 ease-in-out lg:transition-none
           flex flex-col
         `}>
+          {/* Tab Headers */}
           <div className="p-4 border-b border-gray-200 flex-shrink-0">
-            <h2 className="text-lg font-semibold text-gray-900">Deployments</h2>
+            <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setSidebarTab('deployments')}
+                className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                  sidebarTab === 'deployments'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <FileText className="w-4 h-4" />
+                <span>Deployments</span>
+              </button>
+              <button
+                onClick={() => setSidebarTab('namespaces')}
+                className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                  sidebarTab === 'namespaces'
+                    ? 'bg-white text-purple-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <Database className="w-4 h-4" />
+                <span>Namespaces</span>
+              </button>
+            </div>
           </div>
+
+          {/* Tab Content */}
           <div className="flex-1 overflow-y-auto">
-            {deployments.length > 0 ? (
-              <DeploymentsList
-                deployments={deployments}
-                selectedIndex={selectedDeployment}
+            {sidebarTab === 'deployments' ? (
+              deployments.length > 0 ? (
+                <DeploymentsList
+                  deployments={deployments}
+                  selectedIndex={selectedDeployment}
+                  onSelect={(index) => {
+                    setSelectedDeployment(index);
+                    setSidebarOpen(false); // Close sidebar on mobile after selection
+                  }}
+                  onEdit={() => setShowForm(true)}
+                  onDelete={handleDeleteDeployment}
+                  onDuplicate={handleDuplicateDeployment}
+                />
+              ) : (
+                <div className="p-6 text-center">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <FileText className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Deployments</h3>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Get started by creating your first Kubernetes deployment
+                  </p>
+                  <button
+                    onClick={handleAddDeployment}
+                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm font-medium"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Deployment
+                  </button>
+                </div>
+              )
+            ) : (
+              <NamespacesList
+                namespaces={namespaces}
+                selectedIndex={selectedNamespace}
                 onSelect={(index) => {
-                  setSelectedDeployment(index);
+                  setSelectedNamespace(index);
                   setSidebarOpen(false); // Close sidebar on mobile after selection
                 }}
-                onEdit={() => setShowForm(true)}
-                onDelete={handleDeleteDeployment}
-                onDuplicate={handleDuplicateDeployment}
+                onEdit={() => setShowNamespaceManager(true)}
+                onDelete={handleDeleteNamespace}
+                onDuplicate={handleDuplicateNamespace}
               />
-            ) : (
-              <div className="p-6 text-center">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <FileText className="w-8 h-8 text-gray-400" />
-                </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No Deployments</h3>
-                <p className="text-sm text-gray-500 mb-4">
-                  Get started by creating your first Kubernetes deployment
-                </p>
-                <button
-                  onClick={handleAddDeployment}
-                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm font-medium"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Deployment
-                </button>
-              </div>
             )}
           </div>
         </div>
@@ -342,7 +480,11 @@ function App() {
             
             {/* Modal Content */}
             <div className="flex-1 overflow-y-auto p-6">
-              <DeploymentForm config={currentConfig} onChange={handleConfigChange} />
+              <DeploymentForm 
+                config={currentConfig} 
+                onChange={handleConfigChange}
+                availableNamespaces={availableNamespaces}
+              />
             </div>
             
             {/* Modal Footer */}
@@ -362,6 +504,16 @@ function App() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Namespace Manager Modal */}
+      {showNamespaceManager && (
+        <NamespaceManager
+          namespaces={namespaces}
+          onAddNamespace={handleAddNamespace}
+          onDeleteNamespace={handleDeleteNamespace}
+          onClose={() => setShowNamespaceManager(false)}
+        />
       )}
     </div>
   );

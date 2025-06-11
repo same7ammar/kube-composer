@@ -1,4 +1,4 @@
-import React from 'react';
+import { useState } from 'react';
 import { Copy, Check } from 'lucide-react';
 
 interface YamlPreviewProps {
@@ -6,7 +6,7 @@ interface YamlPreviewProps {
 }
 
 export function YamlPreview({ yaml }: YamlPreviewProps) {
-  const [copied, setCopied] = React.useState(false);
+  const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
     try {

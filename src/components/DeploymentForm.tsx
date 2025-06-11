@@ -4,9 +4,10 @@ import type { DeploymentConfig } from '../types';
 interface DeploymentFormProps {
   config: DeploymentConfig;
   onChange: (config: DeploymentConfig) => void;
+  availableNamespaces: string[];
 }
 
-export function DeploymentForm({ config, onChange }: DeploymentFormProps) {
+export function DeploymentForm({ config, onChange, availableNamespaces }: DeploymentFormProps) {
   const updateConfig = (updates: Partial<DeploymentConfig>) => {
     onChange({ ...config, ...updates });
   };
@@ -100,13 +101,26 @@ export function DeploymentForm({ config, onChange }: DeploymentFormProps) {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Namespace
             </label>
-            <input
-              type="text"
+            <select
               value={config.namespace}
               onChange={(e) => updateConfig({ namespace: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
-              placeholder="default"
-            />
+            >
+              {availableNamespaces.map(namespace => (
+                <option key={namespace} value={namespace}>
+                  {namespace}
+                </option>
+              ))}
+            </select>
+            <div className="mt-1">
+              <input
+                type="text"
+                value={config.namespace}
+                onChange={(e) => updateConfig({ namespace: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                placeholder="Or enter custom namespace"
+              />
+            </div>
           </div>
         </div>
       </div>

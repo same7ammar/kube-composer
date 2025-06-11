@@ -31,11 +31,21 @@ export function useUsageCounter() {
   const loadStats = async () => {
     setIsLoading(true);
     try {
+      // Get environment variables safely
+      const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL;
+      const supabaseKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY;
+
+      if (!supabaseUrl || !supabaseKey) {
+        console.log('Supabase environment variables not configured, using localStorage');
+        loadFromLocalStorage();
+        return;
+      }
+
       // Try to load from Supabase first
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/increment-downloads`, {
+      const response = await fetch(`${supabaseUrl}/functions/v1/increment-downloads`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${supabaseKey}`,
           'Content-Type': 'application/json',
         },
       });
@@ -89,11 +99,23 @@ export function useUsageCounter() {
       };
       setStats(optimisticStats);
 
+      // Get environment variables safely
+      const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL;
+      const supabaseKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY;
+
+      if (!supabaseUrl || !supabaseKey) {
+        // If Supabase not configured, just save to localStorage
+        if (isLocalStorageAvailable()) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(optimisticStats));
+        }
+        return;
+      }
+
       // Try to increment in Supabase
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/increment-downloads`, {
+      const response = await fetch(`${supabaseUrl}/functions/v1/increment-downloads`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${supabaseKey}`,
           'Content-Type': 'application/json',
         },
       });
