@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Download, Eye, FileText, List, Plus, Menu, X } from 'lucide-react';
+import { Download, Eye, FileText, List, Plus, Menu, X, Database } from 'lucide-react';
 import { DeploymentForm } from './components/DeploymentForm';
 import { YamlPreview } from './components/YamlPreview';
 import { ResourceSummary } from './components/ResourceSummary';
@@ -8,16 +8,26 @@ import { ArchitecturePreview } from './components/ArchitecturePreview';
 import { Footer } from './components/Footer';
 import { SocialShare } from './components/SocialShare';
 import { SEOHead } from './components/SEOHead';
+import { NamespaceManager } from './components/NamespaceManager';
 import { generateMultiDeploymentYaml } from './utils/yamlGenerator';
-import type { DeploymentConfig } from './types';
+import type { DeploymentConfig, Namespace } from './types';
 
 type PreviewMode = 'visual' | 'yaml' | 'summary';
 
 function App() {
   const [deployments, setDeployments] = useState<DeploymentConfig[]>([]);
+  const [namespaces, setNamespaces] = useState<Namespace[]>([
+    {
+      name: 'default',
+      labels: {},
+      annotations: {},
+      createdAt: new Date().toISOString()
+    }
+  ]);
   const [selectedDeployment, setSelectedDeployment] = useState<number>(0);
   const [previewMode, setPreviewMode] = useState<PreviewMode>('visual');
   const [showForm, setShowForm] = useState(false);
+  const [showNamespaceManager, setShowNamespaceManager] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const currentConfig = deployments[selectedDeployment] || {
@@ -41,10 +51,10 @@ function App() {
   };
 
   // Get available namespaces from all deployments
-  const availableNamespaces = [...new Set(deployments.map(d => d.namespace).filter(Boolean))];
-  if (!availableNamespaces.includes('default')) {
-    availableNamespaces.unshift('default');
-  }
+  const availableNamespaces = [...new Set([
+    ...namespaces.map(ns => ns.name),
+    ...deployments.map(d => d.namespace).filter(Boolean)
+  ])];
 
   const handleConfigChange = (newConfig: DeploymentConfig) => {
     const newDeployments = [...deployments];
@@ -111,6 +121,28 @@ function App() {
     setSelectedDeployment(index + 1);
   };
 
+  const handleAddNamespace = (namespace: Namespace) => {
+    setNamespaces([...namespaces, namespace]);
+  };
+
+  const handleDeleteNamespace = (namespaceName: string) => {
+    // Don't allow deleting system namespaces
+    if (['default', 'kube-system', 'kube-public', 'kube-node-lease'].includes(namespaceName)) {
+      return;
+    }
+
+    // Remove the namespace
+    setNamespaces(namespaces.filter(ns => ns.name !== namespaceName));
+    
+    // Move any deployments using this namespace to 'default'
+    const updatedDeployments = deployments.map(deployment => 
+      deployment.namespace === namespaceName 
+        ? { ...deployment, namespace: 'default' }
+        : deployment
+    );
+    setDeployments(updatedDeployments);
+  };
+
   const handleDownload = async () => {
     if (deployments.length === 0) {
       return;
@@ -122,7 +154,7 @@ function App() {
       return;
     }
     
-    const yaml = generateMultiDeploymentYaml(validDeployments);
+    const yaml = generateMultiDeploymentYaml(validDeployments, namespaces);
     const blob = new Blob([yaml], { type: 'text/yaml' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -142,16 +174,12 @@ function App() {
 
   // Generate YAML for preview based on mode
   const getPreviewYaml = () => {
-    if (deployments.length === 0) {
+    if (deployments.length === 0 && namespaces.length <= 1) {
       return '# No deployments configured\n# Create your first deployment to see the generated YAML';
     }
     
     const validDeployments = deployments.filter(d => d.appName);
-    if (validDeployments.length === 0) {
-      return '# No valid deployments found\n# Please configure at least one deployment with an app name';
-    }
-    
-    return generateMultiDeploymentYaml(validDeployments);
+    return generateMultiDeploymentYaml(validDeployments, namespaces);
   };
 
   const previewModes = [
@@ -205,8 +233,19 @@ function App() {
                   <FileText className="w-4 h-4" />
                   <span>{deployments.length} deployment{deployments.length !== 1 ? 's' : ''}</span>
                 </div>
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <Database className="w-4 h-4" />
+                  <span>{namespaces.length} namespace{namespaces.length !== 1 ? 's' : ''}</span>
+                </div>
                 <SocialShare />
               </div>
+              <button
+                onClick={() => setShowNamespaceManager(true)}
+                className="inline-flex items-center px-2 sm:px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200 text-sm"
+              >
+                <Database className="w-4 h-4 sm:mr-1" />
+                <span className="hidden sm:inline">Namespaces</span>
+              </button>
               <button
                 onClick={handleAddDeployment}
                 className="inline-flex items-center px-2 sm:px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 text-sm"
@@ -377,6 +416,16 @@ function App() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Namespace Manager Modal */}
+      {showNamespaceManager && (
+        <NamespaceManager
+          namespaces={namespaces}
+          onAddNamespace={handleAddNamespace}
+          onDeleteNamespace={handleDeleteNamespace}
+          onClose={() => setShowNamespaceManager(false)}
+        />
       )}
     </div>
   );
