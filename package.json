@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://same7ammar.github.io/kube-composer/",
+  "homepage": "https://kube-composer.com/",
   "scripts": {
     "dev": "vite",
     "build": "npx tsc && vite build",
