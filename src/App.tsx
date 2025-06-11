@@ -137,12 +137,83 @@ function App() {
   // Generate YAML for preview based on mode
   const getPreviewYaml = () => {
     if (deployments.length === 0) {
-      return '# No deployments configured\n# Create your first deployment to see the generated YAML';
+      return `# Welcome to Kube Composer!
+# 
+# This is a free Kubernetes YAML generator that helps you create
+# production-ready deployment configurations without writing YAML manually.
+#
+# To get started:
+# 1. Click "Add Deployment" to create your first deployment
+# 2. Configure your application settings in the form
+# 3. Watch as your YAML is generated in real-time
+# 4. Download the complete YAML file when ready
+#
+# Features:
+# - Visual deployment editor
+# - Multi-deployment support  
+# - Real-time YAML generation
+# - Architecture visualization
+# - Resource validation
+# - Production-ready output
+#
+# No registration required - start building now!
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: getting-started
+  namespace: default
+data:
+  welcome: |
+    Welcome to Kube Composer!
+    Create your first deployment to see generated YAML here.
+  docs: "Visit https://kubernetes.io/docs/ for Kubernetes documentation"
+  repository: "https://github.com/same7ammar/kube-composer"`;
     }
     
     const validDeployments = deployments.filter(d => d.appName);
     if (validDeployments.length === 0) {
-      return '# No valid deployments found\n# Please configure at least one deployment with an app name';
+      return `# Deployment Configuration Needed
+#
+# You have ${deployments.length} deployment${deployments.length !== 1 ? 's' : ''} but none have been properly configured yet.
+# 
+# To generate YAML:
+# 1. Select a deployment from the sidebar
+# 2. Click the edit button (⚙️) to configure it
+# 3. Add at least an application name and container image
+# 4. Your YAML will appear here automatically
+#
+# Required fields:
+# - Application Name: A unique name for your deployment
+# - Container Image: The Docker image to deploy (e.g., nginx:latest)
+#
+# Optional but recommended:
+# - Resource limits (CPU/Memory)
+# - Environment variables
+# - Service configuration
+# - Volume mounts
+
+# Example minimal configuration:
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-app
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: my-app
+  template:
+    metadata:
+      labels:
+        app: my-app
+    spec:
+      containers:
+      - name: my-app
+        image: nginx:latest
+        ports:
+        - containerPort: 80`;
     }
     
     return generateMultiDeploymentYaml(validDeployments);
