@@ -37,8 +37,8 @@ export function YamlPreview({ yaml }: YamlPreviewProps) {
   const maxLineNumber = yamlLines.length;
   const lineNumberWidth = maxLineNumber.toString().length;
 
-  // Syntax highlighting function
-  const highlightYaml = (line: string, lineIndex: number) => {
+  // Syntax highlighting function that returns JSX elements
+  const highlightYamlLine = (line: string, lineIndex: number) => {
     // Skip empty lines
     if (!line.trim()) {
       return <span key={lineIndex} className="text-gray-400">{line}</span>;
@@ -46,62 +46,110 @@ export function YamlPreview({ yaml }: YamlPreviewProps) {
 
     // Comments
     if (line.trim().startsWith('#')) {
-      return <span key={lineIndex} className="text-green-500 italic">{line}</span>;
+      return <span key={lineIndex} className="text-green-400 italic">{line}</span>;
     }
 
     // YAML separators
     if (line.trim() === '---') {
-      return <span key={lineIndex} className="text-purple-500 font-bold">{line}</span>;
+      return <span key={lineIndex} className="text-purple-400 font-bold">{line}</span>;
     }
 
-    let highlightedLine = line;
-    
-    // Keys (before colon)
-    highlightedLine = highlightedLine.replace(
-      /^(\s*)([a-zA-Z_][a-zA-Z0-9_-]*):(?=\s|$)/,
-      '$1<span class="text-blue-400 font-medium">$2</span>:'
-    );
+    // Parse the line for different syntax elements
+    const parts = [];
+    let remainingLine = line;
+    let partIndex = 0;
 
-    // String values (quoted)
-    highlightedLine = highlightedLine.replace(
-      /"([^"]*)"/g,
-      '<span class="text-green-300">"$1"</span>'
-    );
-    highlightedLine = highlightedLine.replace(
-      /'([^']*)'/g,
-      '<span class="text-green-300">\'$1\'</span>'
-    );
+    // Handle indentation
+    const indentMatch = remainingLine.match(/^(\s*)/);
+    if (indentMatch && indentMatch[1]) {
+      parts.push(<span key={`${lineIndex}-indent-${partIndex++}`}>{indentMatch[1]}</span>);
+      remainingLine = remainingLine.slice(indentMatch[1].length);
+    }
 
-    // Numbers
-    highlightedLine = highlightedLine.replace(
-      /:\s*(\d+)(\s|$)/g,
-      ': <span class="text-yellow-300">$1</span>$2'
-    );
+    // Handle array items
+    if (remainingLine.startsWith('- ')) {
+      parts.push(<span key={`${lineIndex}-array-${partIndex++}`} className="text-purple-400">-</span>);
+      parts.push(<span key={`${lineIndex}-space-${partIndex++}`}> </span>);
+      remainingLine = remainingLine.slice(2);
+    }
 
-    // Booleans
-    highlightedLine = highlightedLine.replace(
-      /:\s*(true|false)(\s|$)/g,
-      ': <span class="text-orange-300">$1</span>$2'
-    );
+    // Handle keys (before colon)
+    const keyMatch = remainingLine.match(/^([a-zA-Z_][a-zA-Z0-9_-]*):(\s|$)/);
+    if (keyMatch) {
+      parts.push(<span key={`${lineIndex}-key-${partIndex++}`} className="text-blue-400 font-medium">{keyMatch[1]}</span>);
+      parts.push(<span key={`${lineIndex}-colon-${partIndex++}`}>:</span>);
+      remainingLine = remainingLine.slice(keyMatch[0].length);
+      
+      if (keyMatch[2]) {
+        parts.push(<span key={`${lineIndex}-keyspace-${partIndex++}`}>{keyMatch[2]}</span>);
+      }
+    }
 
-    // Array items
-    highlightedLine = highlightedLine.replace(
-      /^(\s*)-\s/,
-      '$1<span class="text-purple-400">-</span> '
-    );
+    // Handle the rest of the line (values)
+    if (remainingLine) {
+      // String values (quoted)
+      remainingLine = remainingLine.replace(
+        /"([^"]*)"/g,
+        (match, content) => {
+          parts.push(<span key={`${lineIndex}-string-${partIndex++}`} className="text-green-300">"{content}"</span>);
+          return '';
+        }
+      );
+      
+      remainingLine = remainingLine.replace(
+        /'([^']*)'/g,
+        (match, content) => {
+          parts.push(<span key={`${lineIndex}-string2-${partIndex++}`} className="text-green-300">'{content}'</span>);
+          return '';
+        }
+      );
 
-    // Special Kubernetes values
-    highlightedLine = highlightedLine.replace(
-      /:\s*(apps\/v1|v1|Deployment|Service|ConfigMap|Secret|Namespace)(\s|$)/g,
-      ': <span class="text-cyan-300 font-medium">$1</span>$2'
-    );
+      // Numbers
+      remainingLine = remainingLine.replace(
+        /^\s*(\d+)(\s|$)/,
+        (match, number, space) => {
+          if (match.trim()) {
+            parts.push(<span key={`${lineIndex}-space2-${partIndex++}`}> </span>);
+            parts.push(<span key={`${lineIndex}-number-${partIndex++}`} className="text-yellow-300">{number}</span>);
+            if (space) parts.push(<span key={`${lineIndex}-numspace-${partIndex++}`}>{space}</span>);
+          }
+          return '';
+        }
+      );
 
-    return (
-      <span 
-        key={lineIndex} 
-        dangerouslySetInnerHTML={{ __html: highlightedLine }}
-      />
-    );
+      // Booleans
+      remainingLine = remainingLine.replace(
+        /^\s*(true|false)(\s|$)/,
+        (match, bool, space) => {
+          if (match.trim()) {
+            parts.push(<span key={`${lineIndex}-space3-${partIndex++}`}> </span>);
+            parts.push(<span key={`${lineIndex}-bool-${partIndex++}`} className="text-orange-300">{bool}</span>);
+            if (space) parts.push(<span key={`${lineIndex}-boolspace-${partIndex++}`}>{space}</span>);
+          }
+          return '';
+        }
+      );
+
+      // Special Kubernetes values
+      remainingLine = remainingLine.replace(
+        /^\s*(apps\/v1|v1|Deployment|Service|ConfigMap|Secret|Namespace)(\s|$)/,
+        (match, k8sValue, space) => {
+          if (match.trim()) {
+            parts.push(<span key={`${lineIndex}-space4-${partIndex++}`}> </span>);
+            parts.push(<span key={`${lineIndex}-k8s-${partIndex++}`} className="text-cyan-300 font-medium">{k8sValue}</span>);
+            if (space) parts.push(<span key={`${lineIndex}-k8sspace-${partIndex++}`}>{space}</span>);
+          }
+          return '';
+        }
+      );
+
+      // Any remaining text
+      if (remainingLine.trim()) {
+        parts.push(<span key={`${lineIndex}-remaining-${partIndex++}`} className="text-gray-100">{remainingLine}</span>);
+      }
+    }
+
+    return <span key={lineIndex}>{parts}</span>;
   };
 
   return (
@@ -194,7 +242,7 @@ export function YamlPreview({ yaml }: YamlPreviewProps) {
                     </span>
                   )}
                   <span className="flex-1">
-                    {highlightYaml(line, index)}
+                    {highlightYamlLine(line, index)}
                   </span>
                 </div>
               ))}
