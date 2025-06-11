@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { Copy, Check } from 'lucide-react';
 
 interface YamlPreviewProps {
@@ -7,7 +7,6 @@ interface YamlPreviewProps {
 
 export function YamlPreview({ yaml }: YamlPreviewProps) {
   const [copied, setCopied] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleCopy = async () => {
     try {
@@ -42,13 +41,9 @@ export function YamlPreview({ yaml }: YamlPreviewProps) {
       </div>
       
       <div className="bg-gray-900 rounded-lg overflow-hidden">
-        <textarea
-          ref={textareaRef}
-          value={yaml}
-          readOnly
-          className="w-full h-96 p-4 text-sm text-gray-100 bg-gray-900 font-mono resize-none focus:outline-none"
-          style={{ fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace' }}
-        />
+        <pre className="p-4 text-sm text-gray-100 overflow-x-auto">
+          <code>{yaml}</code>
+        </pre>
       </div>
     </div>
   );

@@ -40,6 +40,12 @@ function App() {
     secrets: []
   };
 
+  // Get available namespaces from all deployments
+  const availableNamespaces = [...new Set(deployments.map(d => d.namespace).filter(Boolean))];
+  if (!availableNamespaces.includes('default')) {
+    availableNamespaces.unshift('default');
+  }
+
   const handleConfigChange = (newConfig: DeploymentConfig) => {
     const newDeployments = [...deployments];
     if (selectedDeployment < deployments.length) {
@@ -347,7 +353,11 @@ function App() {
             
             {/* Modal Content */}
             <div className="flex-1 overflow-y-auto p-6">
-              <DeploymentForm config={currentConfig} onChange={handleConfigChange} />
+              <DeploymentForm 
+                config={currentConfig} 
+                onChange={handleConfigChange}
+                availableNamespaces={availableNamespaces}
+              />
             </div>
             
             {/* Modal Footer */}
