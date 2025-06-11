@@ -326,7 +326,14 @@ spec:
                 <FileText className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-lg sm:text-xl font-semibold text-gray-900">Kube Composer</h1>
+                <a
+                  href="https://kube-composer.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-lg sm:text-xl font-semibold text-gray-900 hover:text-blue-600 transition-colors duration-200"
+                >
+                  Kube Composer
+                </a>
                 <p className="text-xs sm:text-sm text-gray-500 hidden sm:block">Kubernetes YAML Generator for developers</p>
               </div>
             </div>
