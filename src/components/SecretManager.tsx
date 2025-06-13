@@ -280,7 +280,7 @@ export function SecretManager({
                 
                 {Object.entries(newSecret.data).length > 0 && (
                   <div className="space-y-1 max-h-32 overflow-y-auto">
-                    {Object.entries(newSecret.data).map(([key, value]) => (
+                    {Object.entries(newSecret.data).map(([key]) => (
                       <div key={key} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-lg">
                         <div className="min-w-0 flex-1">
                           <div className="text-sm font-medium text-gray-900">{key}</div>

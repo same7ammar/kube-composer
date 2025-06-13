@@ -1,4 +1,4 @@
-import type { DeploymentConfig, KubernetesResource, Namespace, Container, ConfigMap, Secret } from '../types';
+import type { DeploymentConfig, KubernetesResource, Namespace, ConfigMap, Secret } from '../types';
 
 export function generateKubernetesYaml(config: DeploymentConfig): string {
   if (!config.appName) {
