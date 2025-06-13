@@ -9,6 +9,16 @@ interface DeploymentFormProps {
   availableSecrets: Secret[];
 }
 
+interface EnvVar {
+  name: string;
+  value?: string;
+  valueFrom?: {
+    type: 'configMap' | 'secret';
+    name: string;
+    key: string;
+  };
+}
+
 export function DeploymentForm({ config, onChange, availableNamespaces, availableConfigMaps, availableSecrets }: DeploymentFormProps) {
   const updateConfig = (updates: Partial<DeploymentConfig>) => {
     onChange({ ...config, ...updates });
@@ -70,7 +80,7 @@ export function DeploymentForm({ config, onChange, availableNamespaces, availabl
     updateConfig({ containers: newContainers });
   };
 
-  const updateContainerEnvVar = (containerIndex: number, envIndex: number, updates: Partial<typeof config.containers[0].env[0]>) => {
+  const updateContainerEnvVar = (containerIndex: number, envIndex: number, updates: Partial<EnvVar>) => {
     const newContainers = [...config.containers];
     newContainers[containerIndex].env[envIndex] = {
       ...newContainers[containerIndex].env[envIndex],
@@ -685,9 +695,9 @@ export function DeploymentForm({ config, onChange, availableNamespaces, availabl
                     <div className="text-xs text-blue-800">
                       <p className="font-medium mb-1">Default Mount Paths</p>
                       <ul className="text-xs space-y-1">
-                        <li>• <strong>ConfigMaps:</strong> /etc/config/&lt;name&gt;</li>
-                        <li>• <strong>Secrets:</strong> /etc/secrets/&lt;name&gt;</li>
-                        <li>• <strong>EmptyDir:</strong> /tmp/&lt;name&gt;</li>
+                        <li>• <strong>ConfigMaps:</strong> /etc/config/<name></li>
+                        <li>• <strong>Secrets:</strong> /etc/secrets/<name></li>
+                        <li>• <strong>EmptyDir:</strong> /tmp/<name></li>
                       </ul>
                     </div>
                   </div>
