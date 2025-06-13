@@ -1,5 +1,5 @@
 import { Plus, Minus, Server, Settings, Database, Key, Trash2, Copy, Globe, Shield, FileText } from 'lucide-react';
-import type { DeploymentConfig, Container, ConfigMap, Secret, EnvVar } from '../types';
+import type { DeploymentConfig, Container, ConfigMap, Secret } from '../types';
 
 interface DeploymentFormProps {
   config: DeploymentConfig;
@@ -70,11 +70,11 @@ export function DeploymentForm({ config, onChange, availableNamespaces, availabl
     updateConfig({ containers: newContainers });
   };
 
-  const updateContainerEnvVar = (containerIndex: number, envIndex: number, updates: Partial<EnvVar>) => {
+  const updateContainerEnvVar = (containerIndex: number, envIndex: number, field: 'name' | 'value', value: string) => {
     const newContainers = [...config.containers];
     newContainers[containerIndex].env[envIndex] = {
       ...newContainers[containerIndex].env[envIndex],
-      ...updates
+      [field]: value
     };
     updateConfig({ containers: newContainers });
   };
@@ -241,19 +241,6 @@ export function DeploymentForm({ config, onChange, availableNamespaces, availabl
   // Filter ConfigMaps and Secrets by namespace
   const filteredConfigMaps = availableConfigMaps.filter(cm => cm.namespace === config.namespace);
   const filteredSecrets = availableSecrets.filter(s => s.namespace === config.namespace);
-
-  // Helper function to get default mount path
-  const getDefaultMountPath = (volumeName: string, volumeType: string) => {
-    switch (volumeType) {
-      case 'configMap':
-        return `/etc/config/${volumeName}`;
-      case 'secret':
-        return `/etc/secrets/${volumeName}`;
-      case 'emptyDir':
-      default:
-        return `/tmp/${volumeName}`;
-    }
-  };
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -496,14 +483,14 @@ export function DeploymentForm({ config, onChange, availableNamespaces, availabl
                         <input
                           type="text"
                           value={envVar.name}
-                          onChange={(e) => updateContainerEnvVar(containerIndex, envIndex, { name: e.target.value })}
+                          onChange={(e) => updateContainerEnvVar(containerIndex, envIndex, 'name', e.target.value)}
                           className="flex-1 px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
                           placeholder="Variable name"
                         />
                         <input
                           type="text"
                           value={envVar.value || ''}
-                          onChange={(e) => updateContainerEnvVar(containerIndex, envIndex, { value: e.target.value })}
+                          onChange={(e) => updateContainerEnvVar(containerIndex, envIndex, 'value', e.target.value)}
                           className="flex-1 px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
                           placeholder="Variable value"
                         />
@@ -538,18 +525,11 @@ export function DeploymentForm({ config, onChange, availableNamespaces, availabl
                       <div key={mountIndex} className="flex items-center space-x-2">
                         <select
                           value={mount.name}
-                          onChange={(e) => {
-                            const selectedVolume = config.volumes.find(v => v.name === e.target.value);
-                            const defaultPath = selectedVolume ? getDefaultMountPath(selectedVolume.name, selectedVolume.type) : '';
-                            updateContainerVolumeMount(containerIndex, mountIndex, 'name', e.target.value);
-                            if (!mount.mountPath && defaultPath) {
-                              updateContainerVolumeMount(containerIndex, mountIndex, 'mountPath', defaultPath);
-                            }
-                          }}
+                          onChange={(e) => updateContainerVolumeMount(containerIndex, mountIndex, 'name', e.target.value)}
                           className="flex-1 px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
                         >
-                          <option value="">Select volume</option>
-                          {config.volumes.map(volume => (
+                          <option value="">Select Volume</option>
+                          {config.volumes.map((volume) => (
                             <option key={volume.name} value={volume.name}>
                               {volume.name} ({volume.type})
                             </option>
@@ -577,28 +557,9 @@ export function DeploymentForm({ config, onChange, availableNamespaces, availabl
                 {/* Help text for volume mounts */}
                 {config.volumes.length === 0 && (
                   <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="flex items-start space-x-2">
-                      <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span className="text-blue-600 text-xs font-bold">i</span>
-                      </div>
-                      <div className="text-sm text-blue-800">
-                        <p className="font-medium mb-1">No volumes available</p>
-                        <p>Create volumes in the "Volumes" section below to mount them in containers.</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {config.volumes.length > 0 && container.volumeMounts.length === 0 && (
-                  <div className="mt-2 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                    <div className="text-sm text-gray-600">
-                      <p className="font-medium mb-1">Default Mount Paths</p>
-                      <ul className="text-xs space-y-1">
-                        <li>• <strong>ConfigMaps:</strong> /etc/config/{'<name>'}</li>
-                        <li>• <strong>Secrets:</strong> /etc/secrets/{'<name>'}</li>
-                        <li>• <strong>EmptyDir:</strong> /tmp/{'<name>'}</li>
-                      </ul>
-                    </div>
+                    <p className="text-sm text-blue-800">
+                      <strong>No volumes available.</strong> Create volumes in the "Volumes" section below to mount them in containers.
+                    </p>
                   </div>
                 )}
               </div>
