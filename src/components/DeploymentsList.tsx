@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings, Copy, Trash2, AlertTriangle, Database } from 'lucide-react';
+import { Settings, Copy, Trash2, AlertTriangle, Database, Globe } from 'lucide-react';
 import type { DeploymentConfig } from '../types';
 
 interface DeploymentsListProps {
@@ -45,11 +45,13 @@ export function DeploymentsList({
   const getDeploymentSummary = (deployment: DeploymentConfig) => {
     const containerCount = deployment.containers?.length || 0;
     const primaryImage = deployment.containers?.[0]?.image || deployment.image || 'No image specified';
+    const hasIngress = deployment.ingress?.enabled || false;
     
     return {
       containerCount,
       primaryImage,
-      hasMultipleContainers: containerCount > 1
+      hasMultipleContainers: containerCount > 1,
+      hasIngress
     };
   };
 
@@ -80,14 +82,24 @@ export function DeploymentsList({
                   <div className="text-sm text-gray-500 truncate">
                     {summary.primaryImage}
                   </div>
-                  {summary.hasMultipleContainers && (
-                    <div className="flex items-center space-x-1 mt-1">
-                      <Database className="w-3 h-3 text-purple-500" />
-                      <span className="text-xs text-purple-600">
-                        {summary.containerCount} containers
-                      </span>
-                    </div>
-                  )}
+                  <div className="flex items-center space-x-2 mt-1">
+                    {summary.hasMultipleContainers && (
+                      <div className="flex items-center space-x-1">
+                        <Database className="w-3 h-3 text-purple-500" />
+                        <span className="text-xs text-purple-600">
+                          {summary.containerCount} containers
+                        </span>
+                      </div>
+                    )}
+                    {summary.hasIngress && (
+                      <div className="flex items-center space-x-1">
+                        <Globe className="w-3 h-3 text-orange-500" />
+                        <span className="text-xs text-orange-600">
+                          Ingress
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
               

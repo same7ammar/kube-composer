@@ -1,4 +1,4 @@
-import { Server, Globe, Database, Key, Settings, CheckCircle, AlertCircle } from 'lucide-react';
+import { Server, Globe, Database, Key, Settings, CheckCircle, AlertCircle, Shield } from 'lucide-react';
 import type { DeploymentConfig } from '../types';
 
 interface ResourceSummaryProps {
@@ -9,6 +9,7 @@ export function ResourceSummary({ config }: ResourceSummaryProps) {
   const getResourceCount = () => {
     let count = 0;
     if (config.appName) count += 2; // Deployment + Service
+    if (config.ingress.enabled) count += 1; // Ingress
     count += config.configMaps.length;
     count += config.secrets.length;
     return count;
@@ -32,6 +33,18 @@ export function ResourceSummary({ config }: ResourceSummaryProps) {
     if (config.port <= 0) issues.push('Service port must be greater than 0');
     if (config.targetPort <= 0) issues.push('Target port must be greater than 0');
     if (config.replicas <= 0) issues.push('Replicas must be greater than 0');
+    
+    // Check ingress configuration
+    if (config.ingress.enabled) {
+      if (config.ingress.rules.length === 0) {
+        issues.push('Ingress is enabled but no rules are configured');
+      } else {
+        config.ingress.rules.forEach((rule, index) => {
+          if (!rule.serviceName) issues.push(`Ingress rule ${index + 1}: Service name is required`);
+          if (rule.servicePort <= 0) issues.push(`Ingress rule ${index + 1}: Service port must be greater than 0`);
+        });
+      }
+    }
     
     return {
       isValid: issues.length === 0,
@@ -102,6 +115,33 @@ export function ResourceSummary({ config }: ResourceSummaryProps) {
         </div>
       </div>
 
+      {/* Ingress Summary */}
+      {config.ingress.enabled && (
+        <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+          <div className="flex items-center space-x-2 mb-2">
+            <Globe className="w-5 h-5 text-orange-600" />
+            <span className="font-medium text-orange-900">Ingress</span>
+          </div>
+          <div className="text-sm text-orange-700 space-y-1">
+            <div>Rules: {config.ingress.rules.length}</div>
+            <div>TLS Certificates: {config.ingress.tls.length}</div>
+            {config.ingress.className && (
+              <div>Ingress Class: {config.ingress.className}</div>
+            )}
+            {config.ingress.rules.length > 0 && (
+              <div className="mt-2">
+                <div className="font-medium mb-1">Configured Hosts:</div>
+                {config.ingress.rules.map((rule, index) => (
+                  <div key={index} className="text-xs text-orange-600">
+                    {rule.host || '*'} → {rule.path} → {rule.serviceName}:{rule.servicePort}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Container Details */}
       {config.containers && config.containers.length > 0 && (
         <div className="space-y-4">
@@ -161,6 +201,28 @@ export function ResourceSummary({ config }: ResourceSummaryProps) {
                   +{config.volumes.length - 3} more...
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Security Features */}
+      {config.ingress.enabled && config.ingress.tls.length > 0 && (
+        <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+          <div className="flex items-center space-x-2 mb-2">
+            <Shield className="w-5 h-5 text-green-600" />
+            <span className="font-medium text-green-900">Security Features</span>
+          </div>
+          <div className="text-sm text-green-700 space-y-1">
+            <div>TLS/SSL Encryption: Enabled</div>
+            <div>TLS Certificates: {config.ingress.tls.length}</div>
+            <div className="mt-2">
+              <div className="font-medium mb-1">Protected Domains:</div>
+              {config.ingress.tls.map((tls, index) => (
+                <div key={index} className="text-xs text-green-600">
+                  {tls.secretName}: {tls.hosts.join(', ')}
+                </div>
+              ))}
             </div>
           </div>
         </div>

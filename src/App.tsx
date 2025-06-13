@@ -56,7 +56,14 @@ function App() {
     annotations: {},
     volumes: [],
     configMaps: [],
-    secrets: []
+    secrets: [],
+    ingress: {
+      enabled: false,
+      className: '',
+      annotations: {},
+      tls: [],
+      rules: []
+    }
   };
 
   // Get available namespaces from all deployments
@@ -98,7 +105,14 @@ function App() {
       annotations: {},
       volumes: [],
       configMaps: [],
-      secrets: []
+      secrets: [],
+      ingress: {
+        enabled: false,
+        className: '',
+        annotations: {},
+        tls: [],
+        rules: []
+      }
     };
     setDeployments([...deployments, newDeployment]);
     setSelectedDeployment(deployments.length);
@@ -131,7 +145,14 @@ function App() {
       containers: deploymentToDuplicate.containers.map(container => ({
         ...container,
         name: container.name ? `${container.name}-copy` : ''
-      }))
+      })),
+      ingress: {
+        ...deploymentToDuplicate.ingress,
+        rules: deploymentToDuplicate.ingress.rules.map(rule => ({
+          ...rule,
+          serviceName: `${deploymentToDuplicate.appName}-copy-service`
+        }))
+      }
     };
     
     const newDeployments = [...deployments];

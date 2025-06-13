@@ -74,6 +74,53 @@ export function generateKubernetesYaml(config: DeploymentConfig): string {
 
   resources.push(service);
 
+  // Generate Ingress if enabled
+  if (config.ingress.enabled && config.ingress.rules.length > 0) {
+    const ingress: KubernetesResource = {
+      apiVersion: 'networking.k8s.io/v1',
+      kind: 'Ingress',
+      metadata: {
+        name: `${config.appName}-ingress`,
+        namespace: config.namespace,
+        labels: {
+          app: config.appName,
+          ...config.labels
+        },
+        ...(Object.keys(config.ingress.annotations).length > 0 && {
+          annotations: config.ingress.annotations
+        })
+      },
+      spec: {
+        ...(config.ingress.className && { ingressClassName: config.ingress.className }),
+        ...(config.ingress.tls.length > 0 && {
+          tls: config.ingress.tls.map(tls => ({
+            secretName: tls.secretName,
+            hosts: tls.hosts.filter(host => host.trim() !== '')
+          })).filter(tls => tls.hosts.length > 0)
+        }),
+        rules: config.ingress.rules.map(rule => ({
+          ...(rule.host && { host: rule.host }),
+          http: {
+            paths: [{
+              path: rule.path,
+              pathType: rule.pathType,
+              backend: {
+                service: {
+                  name: rule.serviceName,
+                  port: {
+                    number: rule.servicePort
+                  }
+                }
+              }
+            }]
+          }
+        }))
+      }
+    };
+
+    resources.push(ingress);
+  }
+
   // Generate ConfigMaps
   config.configMaps.forEach(cm => {
     const configMap: KubernetesResource = {
@@ -344,6 +391,10 @@ data:
       allResources.push(`# Deployments: ${deployments.filter(d => d.appName).length}`);
       const totalContainers = deployments.reduce((sum, d) => sum + (d.containers?.length || 1), 0);
       allResources.push(`# Total Containers: ${totalContainers}`);
+      const ingressCount = deployments.filter(d => d.ingress?.enabled).length;
+      if (ingressCount > 0) {
+        allResources.push(`# Ingress Resources: ${ingressCount}`);
+      }
     }
     allResources.push('');
   }
@@ -405,6 +456,9 @@ data:
           const containerCount = deployment.containers?.length || 1;
           allResources.push(`# === ${deployment.appName.toUpperCase()} DEPLOYMENT ===`);
           allResources.push(`# Containers: ${containerCount}`);
+          if (deployment.ingress?.enabled) {
+            allResources.push(`# Ingress: Enabled`);
+          }
         }
         
         const deploymentYaml = generateKubernetesYaml(deployment);

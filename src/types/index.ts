@@ -10,6 +10,25 @@ export interface Container {
   volumeMounts: Array<{ name: string; mountPath: string }>;
 }
 
+export interface IngressRule {
+  host: string;
+  path: string;
+  pathType: 'Prefix' | 'Exact' | 'ImplementationSpecific';
+  serviceName: string;
+  servicePort: number;
+}
+
+export interface IngressConfig {
+  enabled: boolean;
+  className?: string;
+  annotations: Record<string, string>;
+  tls: Array<{
+    secretName: string;
+    hosts: string[];
+  }>;
+  rules: IngressRule[];
+}
+
 export interface DeploymentConfig {
   appName: string;
   containers: Container[];
@@ -23,6 +42,7 @@ export interface DeploymentConfig {
   volumes: Array<{ name: string; mountPath: string; type: 'emptyDir' | 'configMap' | 'secret' }>;
   configMaps: Array<{ name: string; data: Record<string, string> }>;
   secrets: Array<{ name: string; data: Record<string, string> }>;
+  ingress: IngressConfig;
   // Legacy fields for backward compatibility
   image?: string;
   env?: Array<{ name: string; value: string }>;
