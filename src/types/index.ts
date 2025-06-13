@@ -1,16 +1,18 @@
+export interface EnvVar {
+  name: string; 
+  value?: string;
+  valueFrom?: {
+    type: 'configMap' | 'secret';
+    name: string;
+    key: string;
+  };
+}
+
 export interface Container {
   name: string;
   image: string;
   port: number;
-  env: Array<{ 
-    name: string; 
-    value?: string;
-    valueFrom?: {
-      type: 'configMap' | 'secret';
-      name: string;
-      key: string;
-    };
-  }>;
+  env: EnvVar[];
   resources: {
     requests: { cpu: string; memory: string };
     limits: { cpu: string; memory: string };
