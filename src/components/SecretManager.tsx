@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, X, Key, Trash2, AlertTriangle, Shield, Eye, EyeOff } from 'lucide-react';
+import { Plus, X, Key, Trash2, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import type { Secret } from '../types';
 
 interface SecretManagerProps {
@@ -26,7 +26,6 @@ export function SecretManager({
     data: {} as Record<string, string>
   });
   const [newLabel, setNewLabel] = useState({ key: '', value: '' });
-  const [newAnnotation, setNewAnnotation] = useState({ key: '', value: '' });
   const [newDataEntry, setNewDataEntry] = useState({ key: '', value: '' });
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
@@ -78,23 +77,6 @@ export function SecretManager({
     setNewSecret(prev => {
       const { [key]: removed, ...rest } = prev.labels;
       return { ...prev, labels: rest };
-    });
-  };
-
-  const addAnnotation = () => {
-    if (newAnnotation.key && newAnnotation.value) {
-      setNewSecret(prev => ({
-        ...prev,
-        annotations: { ...prev.annotations, [newAnnotation.key]: newAnnotation.value }
-      }));
-      setNewAnnotation({ key: '', value: '' });
-    }
-  };
-
-  const removeAnnotation = (key: string) => {
-    setNewSecret(prev => {
-      const { [key]: removed, ...rest } = prev.annotations;
-      return { ...prev, annotations: rest };
     });
   };
 
