@@ -22,7 +22,7 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
 
   const toggleDeployment = (index: number) => {
     const newExpanded = new Set(expandedDeployments);
-    if (newExpanded.has(index)) {
+    if (newExpanded.has(index) {
       newExpanded.delete(index);
     } else {
       newExpanded.add(index);
@@ -241,7 +241,7 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
                   
                   return (
                     <div key={index} className="space-y-6">
-                      {/* Traffic Flow Visualization */}
+                      {/* Horizontal Traffic Flow Visualization */}
                       <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl p-6 border border-gray-200">
                         <div className="flex items-center justify-between mb-6">
                           <h5 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
@@ -254,101 +254,90 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
                           </div>
                         </div>
 
-                        {/* Traffic Flow Diagram */}
-                        <div className="space-y-6">
-                          {/* External Users */}
-                          <div className="flex items-center justify-center">
-                            <div className="flex flex-col items-center space-y-3">
-                              <div className={`w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center shadow-lg ${animationsEnabled ? 'animate-bounce' : ''}`}>
-                                <Users className="w-8 h-8 text-white" />
+                        {/* Horizontal Traffic Flow Components */}
+                        <div className="space-y-8">
+                          {/* Main Traffic Flow - Horizontal Layout */}
+                          <div className="flex items-center justify-center space-x-8 overflow-x-auto pb-4">
+                            {/* External Users */}
+                            <div className="flex flex-col items-center space-y-3 flex-shrink-0">
+                              <div className={`w-20 h-20 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center shadow-lg ${animationsEnabled ? 'animate-bounce' : ''}`}>
+                                <Users className="w-10 h-10 text-white" />
                               </div>
                               <div className="text-center">
-                                <div className="text-sm font-semibold text-gray-900">External Users</div>
+                                <div className="text-sm font-bold text-gray-900">External Users</div>
                                 <div className="text-xs text-gray-600">Internet Traffic</div>
                               </div>
                             </div>
-                          </div>
 
-                          {/* Arrow Down */}
-                          <div className="flex justify-center">
+                            {/* Arrow Right */}
                             <div className={`flex flex-col items-center space-y-1 ${animationsEnabled ? 'animate-pulse' : ''}`}>
-                              <ArrowDown className="w-6 h-6 text-purple-500" />
-                              <div className="text-xs text-purple-600 font-medium">HTTPS Requests</div>
+                              <ArrowRight className="w-8 h-8 text-purple-500" />
+                              <div className="text-xs text-purple-600 font-medium">HTTPS</div>
                             </div>
-                          </div>
 
-                          {/* Ingress Layer (if enabled) */}
-                          {hasIngress && (
-                            <>
-                              <div className="flex items-center justify-center">
-                                <div className="flex flex-col items-center space-y-3">
-                                  <div className={`w-20 h-16 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center shadow-lg ${animationsEnabled ? 'animate-pulse' : ''}`}>
-                                    <div className="flex items-center space-x-2">
-                                      <Globe className="w-6 h-6 text-white" />
+                            {/* Ingress Layer (if enabled) */}
+                            {hasIngress && (
+                              <>
+                                <div className="flex flex-col items-center space-y-3 flex-shrink-0">
+                                  <div className={`w-20 h-20 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center shadow-lg ${animationsEnabled ? 'animate-pulse' : ''}`}>
+                                    <div className="flex items-center space-x-1">
+                                      <Globe className="w-8 h-8 text-white" />
                                       {deployment.ingress.tls.length > 0 && (
-                                        <Shield className="w-4 h-4 text-white" />
+                                        <Shield className="w-5 h-5 text-white" />
                                       )}
                                     </div>
                                   </div>
                                   <div className="text-center">
-                                    <div className="text-sm font-semibold text-gray-900">Ingress Controller</div>
+                                    <div className="text-sm font-bold text-gray-900">Ingress Controller</div>
                                     <div className="text-xs text-gray-600">
                                       {deployment.ingress.className || 'nginx'} • {deployment.ingress.rules.length} rule{deployment.ingress.rules.length !== 1 ? 's' : ''}
                                     </div>
                                     {deployment.ingress.tls.length > 0 && (
                                       <div className="flex items-center justify-center space-x-1 mt-1">
                                         <Lock className="w-3 h-3 text-green-600" />
-                                        <span className="text-xs text-green-600 font-medium">TLS Enabled</span>
+                                        <span className="text-xs text-green-600 font-medium">TLS</span>
                                       </div>
                                     )}
                                   </div>
                                 </div>
-                              </div>
 
-                              {/* Arrow Down */}
-                              <div className="flex justify-center">
+                                {/* Arrow Right */}
                                 <div className={`flex flex-col items-center space-y-1 ${animationsEnabled ? 'animate-pulse' : ''}`}>
-                                  <ArrowDown className="w-6 h-6 text-orange-500" />
-                                  <div className="text-xs text-orange-600 font-medium">Route to Service</div>
+                                  <ArrowRight className="w-8 h-8 text-orange-500" />
+                                  <div className="text-xs text-orange-600 font-medium">Route</div>
                                 </div>
-                              </div>
-                            </>
-                          )}
+                              </>
+                            )}
 
-                          {/* Service Layer */}
-                          <div className="flex items-center justify-center">
-                            <div className="flex flex-col items-center space-y-3">
-                              <div className={`w-20 h-16 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg flex items-center justify-center shadow-lg ${animationsEnabled ? 'animate-pulse' : ''}`}>
-                                <Globe className="w-6 h-6 text-white" />
+                            {/* Service Layer */}
+                            <div className="flex flex-col items-center space-y-3 flex-shrink-0">
+                              <div className={`w-20 h-20 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg flex items-center justify-center shadow-lg ${animationsEnabled ? 'animate-pulse' : ''}`}>
+                                <Globe className="w-8 h-8 text-white" />
                               </div>
                               <div className="text-center">
-                                <div className="text-sm font-semibold text-gray-900">{deployment.appName}-service</div>
+                                <div className="text-sm font-bold text-gray-900">{deployment.appName}-service</div>
                                 <div className="text-xs text-gray-600">
-                                  {deployment.serviceType} • Port {deployment.port}→{deployment.targetPort}
+                                  {deployment.serviceType} • {deployment.port}→{deployment.targetPort}
                                 </div>
                                 <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mt-1 ${getServiceTypeColor(deployment.serviceType)}`}>
                                   {deployment.serviceType}
                                 </div>
                               </div>
                             </div>
-                          </div>
 
-                          {/* Arrow Down */}
-                          <div className="flex justify-center">
+                            {/* Arrow Right */}
                             <div className={`flex flex-col items-center space-y-1 ${animationsEnabled ? 'animate-pulse' : ''}`}>
-                              <ArrowDown className="w-6 h-6 text-green-500" />
-                              <div className="text-xs text-green-600 font-medium">Load Balance</div>
+                              <ArrowRight className="w-8 h-8 text-green-500" />
+                              <div className="text-xs text-green-600 font-medium">Balance</div>
                             </div>
-                          </div>
 
-                          {/* Deployment Layer */}
-                          <div className="flex items-center justify-center">
-                            <div className="flex flex-col items-center space-y-3">
-                              <div className={`w-20 h-16 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center shadow-lg ${animationsEnabled ? 'animate-pulse' : ''}`}>
-                                <Server className="w-6 h-6 text-white" />
+                            {/* Deployment Layer */}
+                            <div className="flex flex-col items-center space-y-3 flex-shrink-0">
+                              <div className={`w-20 h-20 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center shadow-lg ${animationsEnabled ? 'animate-pulse' : ''}`}>
+                                <Server className="w-8 h-8 text-white" />
                               </div>
                               <div className="text-center">
-                                <div className="text-sm font-semibold text-gray-900">{deployment.appName}</div>
+                                <div className="text-sm font-bold text-gray-900">{deployment.appName}</div>
                                 <div className="text-xs text-gray-600">
                                   Deployment • {deployment.replicas} replica{deployment.replicas !== 1 ? 's' : ''}
                                 </div>
@@ -363,32 +352,47 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
                             </div>
                           </div>
 
-                          {/* Arrow Down */}
+                          {/* Arrow Down to Pods */}
                           <div className="flex justify-center">
                             <div className={`flex flex-col items-center space-y-1 ${animationsEnabled ? 'animate-pulse' : ''}`}>
-                              <ArrowDown className="w-6 h-6 text-blue-500" />
-                              <div className="text-xs text-blue-600 font-medium">Manage Pods</div>
+                              <ArrowDown className="w-8 h-8 text-blue-500" />
+                              <div className="text-sm text-blue-600 font-medium">Manages Pods</div>
                             </div>
                           </div>
 
-                          {/* Pods Layer */}
-                          <div className="flex items-center justify-center">
-                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 max-w-2xl">
-                              {Array.from({ length: Math.min(deployment.replicas, 8) }).map((_, podIndex) => (
+                          {/* Dedicated Pods Row */}
+                          <div className="bg-white/80 backdrop-blur-sm rounded-lg p-6 border border-gray-200">
+                            <div className="flex items-center justify-between mb-4">
+                              <h6 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+                                <Database className="w-5 h-5 text-purple-600" />
+                                <span>Pod Instances ({deployment.replicas} running)</span>
+                              </h6>
+                              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                                <div className={`w-2 h-2 bg-purple-500 rounded-full ${animationsEnabled ? 'animate-pulse' : ''}`}></div>
+                                <span>Active</span>
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+                              {Array.from({ length: Math.min(deployment.replicas, 16) }).map((_, podIndex) => (
                                 <div key={podIndex} className="flex flex-col items-center space-y-2">
-                                  <div className={`w-14 h-14 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center shadow-md ${animationsEnabled ? 'animate-pulse' : ''}`} style={{ animationDelay: `${podIndex * 0.2}s` }}>
-                                    <Database className="w-5 h-5 text-white" />
+                                  <div className={`w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center shadow-md hover:shadow-lg transition-all duration-200 ${animationsEnabled ? 'animate-pulse' : ''}`} style={{ animationDelay: `${podIndex * 0.1}s` }}>
+                                    <Database className="w-6 h-6 text-white" />
                                   </div>
                                   <div className="text-center">
-                                    <div className="text-xs font-medium text-gray-900">Pod {podIndex + 1}</div>
-                                    <div className="text-xs text-gray-600">{containerCount}c</div>
+                                    <div className="text-xs font-semibold text-gray-900">Pod {podIndex + 1}</div>
+                                    <div className="text-xs text-gray-600">{containerCount} container{containerCount !== 1 ? 's' : ''}</div>
+                                    <div className="flex items-center justify-center space-x-1 mt-1">
+                                      <div className={`w-1.5 h-1.5 bg-green-500 rounded-full ${animationsEnabled ? 'animate-pulse' : ''}`}></div>
+                                      <span className="text-xs text-green-600">Running</span>
+                                    </div>
                                   </div>
                                 </div>
                               ))}
-                              {deployment.replicas > 8 && (
+                              {deployment.replicas > 16 && (
                                 <div className="flex flex-col items-center space-y-2">
-                                  <div className="w-14 h-14 bg-gray-200 rounded-lg flex items-center justify-center shadow-md">
-                                    <span className="text-xs text-gray-600 font-medium">+{deployment.replicas - 8}</span>
+                                  <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center shadow-md">
+                                    <span className="text-sm text-gray-600 font-semibold">+{deployment.replicas - 16}</span>
                                   </div>
                                   <div className="text-center">
                                     <div className="text-xs text-gray-600">More pods</div>
@@ -646,9 +650,9 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
                 with <strong>{totalContainers}</strong> container{totalContainers !== 1 ? 's' : ''} running <strong>{totalPods}</strong> pod{totalPods !== 1 ? 's' : ''} across <strong>{namespaces.length}</strong> namespace{namespaces.length !== 1 ? 's' : ''}.
               </p>
               <p>
-                The traffic flow visualization shows how external requests are routed through your infrastructure:
+                The horizontal traffic flow shows how external requests are routed through your infrastructure:
                 {validDeployments.some(d => d.ingress?.enabled) && ' Ingress controllers handle external routing and TLS termination,'} 
-                Services provide load balancing and service discovery, and Deployments manage your application replicas.
+                Services provide load balancing and service discovery, and Deployments manage your application replicas in dedicated pod instances.
               </p>
               <p>
                 {showDetails ? 'Click on deployments above to explore detailed configurations and resource allocations.' : 'Enable details view to explore configurations and resource allocations.'}
