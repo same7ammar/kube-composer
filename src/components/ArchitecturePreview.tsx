@@ -22,7 +22,7 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
 
   const toggleDeployment = (index: number) => {
     const newExpanded = new Set(expandedDeployments);
-    if (newExpanded.has(index) {
+    if (newExpanded.has(index)) {
       newExpanded.delete(index);
     } else {
       newExpanded.add(index);
