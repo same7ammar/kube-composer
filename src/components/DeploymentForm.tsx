@@ -1,5 +1,5 @@
 import { Plus, Minus, Server, Settings, Database, Key, Trash2, Copy, Globe, Shield, FileText } from 'lucide-react';
-import type { DeploymentConfig, Container, ConfigMap, Secret } from '../types';
+import type { DeploymentConfig, Container, ConfigMap, Secret, EnvVar } from '../types';
 
 interface DeploymentFormProps {
   config: DeploymentConfig;
@@ -74,7 +74,7 @@ export function DeploymentForm({ config, onChange, availableNamespaces, availabl
     updateConfig({ containers: newContainers });
   };
 
-  const updateContainerEnvVar = (containerIndex: number, envIndex: number, updates: Partial<typeof config.containers[0].env[0]>) => {
+  const updateContainerEnvVar = (containerIndex: number, envIndex: number, updates: Partial<EnvVar>) => {
     const newContainers = [...config.containers];
     newContainers[containerIndex].env[envIndex] = {
       ...newContainers[containerIndex].env[envIndex],
@@ -926,9 +926,9 @@ export function DeploymentForm({ config, onChange, availableNamespaces, availabl
             <div className="text-sm text-blue-800">
               <p className="font-medium mb-1">Default Mount Paths</p>
               <ul className="text-xs space-y-1">
-                <li>• <strong>ConfigMaps:</strong> /etc/config/&lt;volume-name&gt;</li>
-                <li>• <strong>Secrets:</strong> /etc/secrets/&lt;volume-name&gt;</li>
-                <li>• <strong>EmptyDir:</strong> /tmp/&lt;volume-name&gt;</li>
+                <li>• <strong>ConfigMaps:</strong> /etc/config/<volume-name></li>
+                <li>• <strong>Secrets:</strong> /etc/secrets/<volume-name></li>
+                <li>• <strong>EmptyDir:</strong> /tmp/<volume-name></li>
               </ul>
               <p className="mt-2 text-xs">Mount paths are automatically set when you create a volume, but you can customize them as needed.</p>
             </div>
