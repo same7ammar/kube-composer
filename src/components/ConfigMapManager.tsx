@@ -25,7 +25,6 @@ export function ConfigMapManager({
     data: {} as Record<string, string>
   });
   const [newLabel, setNewLabel] = useState({ key: '', value: '' });
-  const [newAnnotation, setNewAnnotation] = useState({ key: '', value: '' });
   const [newDataEntry, setNewDataEntry] = useState({ key: '', value: '' });
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
@@ -76,23 +75,6 @@ export function ConfigMapManager({
     setNewConfigMap(prev => {
       const { [key]: removed, ...rest } = prev.labels;
       return { ...prev, labels: rest };
-    });
-  };
-
-  const addAnnotation = () => {
-    if (newAnnotation.key && newAnnotation.value) {
-      setNewConfigMap(prev => ({
-        ...prev,
-        annotations: { ...prev.annotations, [newAnnotation.key]: newAnnotation.value }
-      }));
-      setNewAnnotation({ key: '', value: '' });
-    }
-  };
-
-  const removeAnnotation = (key: string) => {
-    setNewConfigMap(prev => {
-      const { [key]: removed, ...rest } = prev.annotations;
-      return { ...prev, annotations: rest };
     });
   };
 

@@ -1,4 +1,4 @@
-import { Server, Globe, Database, Key, Settings, CheckCircle, AlertCircle, Shield } from 'lucide-react';
+import { Server, Globe, Database, Settings, CheckCircle, AlertCircle, Shield } from 'lucide-react';
 import type { DeploymentConfig } from '../types';
 
 interface ResourceSummaryProps {

@@ -16,7 +16,6 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
   const totalPods = validDeployments.reduce((sum, d) => sum + d.replicas, 0);
   const totalServices = validDeployments.length;
   const totalContainers = validDeployments.reduce((sum, d) => sum + (d.containers?.length || 1), 0);
-  const totalConfigMaps = validDeployments.reduce((sum, d) => sum + d.configMaps.length, 0);
 
   const namespaces = [...new Set(validDeployments.map(d => d.namespace))];
 
