@@ -116,55 +116,6 @@ export function DeploymentForm({ config, onChange, availableNamespaces }: Deploy
         </div>
       </div>
 
-      {/* Service Configuration */}
-      <div className="space-y-4 sm:space-y-6">
-        <div className="flex items-center space-x-2 text-base sm:text-lg font-semibold text-gray-900">
-          <Settings className="w-4 sm:w-5 h-4 sm:h-5 text-green-600" />
-          <span>Service Configuration</span>
-        </div>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Service Port
-            </label>
-            <input
-              type="number"
-              value={config.port}
-              onChange={(e) => updateConfig({ port: parseInt(e.target.value) || 80 })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Target Port
-            </label>
-            <input
-              type="number"
-              value={config.targetPort}
-              onChange={(e) => updateConfig({ targetPort: parseInt(e.target.value) || 8080 })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Service Type
-            </label>
-            <select
-              value={config.serviceType}
-              onChange={(e) => updateConfig({ serviceType: e.target.value as any })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
-            >
-              <option value="ClusterIP">ClusterIP</option>
-              <option value="NodePort">NodePort</option>
-              <option value="LoadBalancer">LoadBalancer</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
       {/* Resource Limits */}
       <div className="space-y-4 sm:space-y-6">
         <div className="flex items-center space-x-2 text-base sm:text-lg font-semibold text-gray-900">
@@ -346,6 +297,55 @@ export function DeploymentForm({ config, onChange, availableNamespaces }: Deploy
             ))}
           </div>
         )}
+      </div>
+
+      {/* Service Configuration - Now positioned after Volumes */}
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex items-center space-x-2 text-base sm:text-lg font-semibold text-gray-900">
+          <Settings className="w-4 sm:w-5 h-4 sm:h-5 text-green-600" />
+          <span>Service Configuration</span>
+        </div>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Service Port
+            </label>
+            <input
+              type="number"
+              value={config.port}
+              onChange={(e) => updateConfig({ port: parseInt(e.target.value) || 80 })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Target Port
+            </label>
+            <input
+              type="number"
+              value={config.targetPort}
+              onChange={(e) => updateConfig({ targetPort: parseInt(e.target.value) || 8080 })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Service Type
+            </label>
+            <select
+              value={config.serviceType}
+              onChange={(e) => updateConfig({ serviceType: e.target.value as any })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+            >
+              <option value="ClusterIP">ClusterIP</option>
+              <option value="NodePort">NodePort</option>
+              <option value="LoadBalancer">LoadBalancer</option>
+            </select>
+          </div>
+        </div>
       </div>
     </div>
   );
