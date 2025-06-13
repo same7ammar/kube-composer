@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Database, Server, Globe, Info, ChevronDown, ChevronUp, Activity, Cpu, HardDrive, Network, Eye, EyeOff, ArrowRight, ArrowDown, Shield, Route } from 'lucide-react';
+import { Database, Server, Globe, Info, ChevronDown, ChevronUp, Activity, Cpu, HardDrive, Network, Eye, EyeOff, ArrowRight, ArrowDown, Shield, Router as Route } from 'lucide-react';
 import type { DeploymentConfig } from '../types';
 
 interface ArchitecturePreviewProps {
