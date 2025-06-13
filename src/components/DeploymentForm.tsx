@@ -1,13 +1,15 @@
-import { Plus, Minus, Server, Settings, Database, Key, Trash2, Copy, Globe, Shield } from 'lucide-react';
-import type { DeploymentConfig, Container } from '../types';
+import { Plus, Minus, Server, Settings, Database, Key, Trash2, Copy, Globe, Shield, FileText } from 'lucide-react';
+import type { DeploymentConfig, Container, ConfigMap, Secret } from '../types';
 
 interface DeploymentFormProps {
   config: DeploymentConfig;
   onChange: (config: DeploymentConfig) => void;
   availableNamespaces: string[];
+  availableConfigMaps: ConfigMap[];
+  availableSecrets: Secret[];
 }
 
-export function DeploymentForm({ config, onChange, availableNamespaces }: DeploymentFormProps) {
+export function DeploymentForm({ config, onChange, availableNamespaces, availableConfigMaps, availableSecrets }: DeploymentFormProps) {
   const updateConfig = (updates: Partial<DeploymentConfig>) => {
     onChange({ ...config, ...updates });
   };
@@ -116,6 +118,33 @@ export function DeploymentForm({ config, onChange, availableNamespaces }: Deploy
     updateConfig({ volumes: newVolumes });
   };
 
+  // ConfigMap and Secret selection functions
+  const toggleConfigMapSelection = (configMapName: string) => {
+    const isSelected = config.selectedConfigMaps.includes(configMapName);
+    if (isSelected) {
+      updateConfig({
+        selectedConfigMaps: config.selectedConfigMaps.filter(name => name !== configMapName)
+      });
+    } else {
+      updateConfig({
+        selectedConfigMaps: [...config.selectedConfigMaps, configMapName]
+      });
+    }
+  };
+
+  const toggleSecretSelection = (secretName: string) => {
+    const isSelected = config.selectedSecrets.includes(secretName);
+    if (isSelected) {
+      updateConfig({
+        selectedSecrets: config.selectedSecrets.filter(name => name !== secretName)
+      });
+    } else {
+      updateConfig({
+        selectedSecrets: [...config.selectedSecrets, secretName]
+      });
+    }
+  };
+
   // Ingress management functions
   const updateIngress = (updates: Partial<typeof config.ingress>) => {
     updateConfig({
@@ -208,6 +237,10 @@ export function DeploymentForm({ config, onChange, availableNamespaces }: Deploy
     newTLS[tlsIndex].hosts[hostIndex] = value;
     updateIngress({ tls: newTLS });
   };
+
+  // Filter ConfigMaps and Secrets by namespace
+  const filteredConfigMaps = availableConfigMaps.filter(cm => cm.namespace === config.namespace);
+  const filteredSecrets = availableSecrets.filter(s => s.namespace === config.namespace);
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -504,6 +537,7 @@ export function DeploymentForm({ config, onChange, availableNamespaces }: Deploy
                           className="flex-1 px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
                           placeholder="/path/to/mount"
                         />
+                        
                         <button
                           onClick={() => removeContainerVolumeMount(containerIndex, mountIndex)}
                           className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors duration-200"
@@ -519,6 +553,94 @@ export function DeploymentForm({ config, onChange, availableNamespaces }: Deploy
           ))}
         </div>
       </div>
+
+      {/* ConfigMaps Selection */}
+      {filteredConfigMaps.length > 0 && (
+        <div className="space-y-4 sm:space-y-6">
+          <div className="flex items-center space-x-2 text-base sm:text-lg font-semibold text-gray-900">
+            <FileText className="w-4 sm:w-5 h-4 sm:h-5 text-green-600" />
+            <span>ConfigMaps</span>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredConfigMaps.map((configMap) => (
+              <div
+                key={configMap.name}
+                className={`p-4 border rounded-lg cursor-pointer transition-all duration-200 ${
+                  config.selectedConfigMaps.includes(configMap.name)
+                    ? 'border-green-500 bg-green-50 ring-2 ring-green-200'
+                    : 'border-gray-200 bg-white hover:border-green-300'
+                }`}
+                onClick={() => toggleConfigMapSelection(configMap.name)}
+              >
+                <div className="flex items-center space-x-3">
+                  <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                    config.selectedConfigMaps.includes(configMap.name)
+                      ? 'border-green-500 bg-green-500'
+                      : 'border-gray-300'
+                  }`}>
+                    {config.selectedConfigMaps.includes(configMap.name) && (
+                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-gray-900 truncate">{configMap.name}</div>
+                    <div className="text-sm text-gray-500">
+                      {Object.keys(configMap.data).length} key{Object.keys(configMap.data).length !== 1 ? 's' : ''}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Secrets Selection */}
+      {filteredSecrets.length > 0 && (
+        <div className="space-y-4 sm:space-y-6">
+          <div className="flex items-center space-x-2 text-base sm:text-lg font-semibold text-gray-900">
+            <Key className="w-4 sm:w-5 h-4 sm:h-5 text-orange-600" />
+            <span>Secrets</span>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredSecrets.map((secret) => (
+              <div
+                key={secret.name}
+                className={`p-4 border rounded-lg cursor-pointer transition-all duration-200 ${
+                  config.selectedSecrets.includes(secret.name)
+                    ? 'border-orange-500 bg-orange-50 ring-2 ring-orange-200'
+                    : 'border-gray-200 bg-white hover:border-orange-300'
+                }`}
+                onClick={() => toggleSecretSelection(secret.name)}
+              >
+                <div className="flex items-center space-x-3">
+                  <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                    config.selectedSecrets.includes(secret.name)
+                      ? 'border-orange-500 bg-orange-500'
+                      : 'border-gray-300'
+                  }`}>
+                    {config.selectedSecrets.includes(secret.name) && (
+                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-gray-900 truncate">{secret.name}</div>
+                    <div className="text-sm text-gray-500">
+                      {Object.keys(secret.data).length} key{Object.keys(secret.data).length !== 1 ? 's' : ''} • {secret.type}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Volumes */}
       <div className="space-y-4 sm:space-y-6">
@@ -563,6 +685,30 @@ export function DeploymentForm({ config, onChange, availableNamespaces }: Deploy
                   <option value="configMap">Config Map</option>
                   <option value="secret">Secret</option>
                 </select>
+                {volume.type === 'configMap' && (
+                  <select
+                    value={volume.configMapName || ''}
+                    onChange={(e) => updateVolume(index, 'configMapName', e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                  >
+                    <option value="">Select ConfigMap</option>
+                    {filteredConfigMaps.map(cm => (
+                      <option key={cm.name} value={cm.name}>{cm.name}</option>
+                    ))}
+                  </select>
+                )}
+                {volume.type === 'secret' && (
+                  <select
+                    value={volume.secretName || ''}
+                    onChange={(e) => updateVolume(index, 'secretName', e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+                  >
+                    <option value="">Select Secret</option>
+                    {filteredSecrets.map(s => (
+                      <option key={s.name} value={s.name}>{s.name}</option>
+                    ))}
+                  </select>
+                )}
                 <button
                   onClick={() => removeVolume(index)}
                   className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200 self-center sm:self-auto"
@@ -844,13 +990,16 @@ export function DeploymentForm({ config, onChange, availableNamespaces }: Deploy
                           <label className="block text-xs font-medium text-gray-600 mb-1">
                             Secret Name
                           </label>
-                          <input
-                            type="text"
+                          <select
                             value={tls.secretName}
                             onChange={(e) => updateIngressTLS(tlsIndex, 'secretName', e.target.value)}
                             className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-green-500 focus:border-transparent text-sm"
-                            placeholder="tls-secret"
-                          />
+                          >
+                            <option value="">Select Secret</option>
+                            {filteredSecrets.filter(s => s.type === 'kubernetes.io/tls').map(s => (
+                              <option key={s.name} value={s.name}>{s.name}</option>
+                            ))}
+                          </select>
                         </div>
                         
                         <div>

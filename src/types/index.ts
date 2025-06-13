@@ -29,6 +29,25 @@ export interface IngressConfig {
   rules: IngressRule[];
 }
 
+export interface ConfigMap {
+  name: string;
+  namespace: string;
+  labels: Record<string, string>;
+  annotations: Record<string, string>;
+  data: Record<string, string>;
+  createdAt: string;
+}
+
+export interface Secret {
+  name: string;
+  namespace: string;
+  labels: Record<string, string>;
+  annotations: Record<string, string>;
+  type: 'Opaque' | 'kubernetes.io/tls' | 'kubernetes.io/dockerconfigjson';
+  data: Record<string, string>;
+  createdAt: string;
+}
+
 export interface DeploymentConfig {
   appName: string;
   containers: Container[];
@@ -39,9 +58,11 @@ export interface DeploymentConfig {
   namespace: string;
   labels: Record<string, string>;
   annotations: Record<string, string>;
-  volumes: Array<{ name: string; mountPath: string; type: 'emptyDir' | 'configMap' | 'secret' }>;
-  configMaps: Array<{ name: string; data: Record<string, string> }>;
-  secrets: Array<{ name: string; data: Record<string, string> }>;
+  volumes: Array<{ name: string; mountPath: string; type: 'emptyDir' | 'configMap' | 'secret'; configMapName?: string; secretName?: string }>;
+  configMaps: Array<{ name: string; data: Record<string, string> }>; // Legacy - for backward compatibility
+  secrets: Array<{ name: string; data: Record<string, string> }>; // Legacy - for backward compatibility
+  selectedConfigMaps: string[]; // References to ConfigMap names
+  selectedSecrets: string[]; // References to Secret names
   ingress: IngressConfig;
   // Legacy fields for backward compatibility
   image?: string;

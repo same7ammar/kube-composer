@@ -1,20 +1,24 @@
 import { useState } from 'react';
-import { Download, Eye, FileText, List, Plus, Menu, X, Database } from 'lucide-react';
+import { Download, Eye, FileText, List, Plus, Menu, X, Database, Settings, Key } from 'lucide-react';
 import { DeploymentForm } from './components/DeploymentForm';
 import { YamlPreview } from './components/YamlPreview';
 import { ResourceSummary } from './components/ResourceSummary';
 import { DeploymentsList } from './components/DeploymentsList';
 import { NamespacesList } from './components/NamespacesList';
+import { ConfigMapsList } from './components/ConfigMapsList';
+import { SecretsList } from './components/SecretsList';
 import { ArchitecturePreview } from './components/ArchitecturePreview';
 import { Footer } from './components/Footer';
 import { SocialShare } from './components/SocialShare';
 import { SEOHead } from './components/SEOHead';
 import { NamespaceManager } from './components/NamespaceManager';
+import { ConfigMapManager } from './components/ConfigMapManager';
+import { SecretManager } from './components/SecretManager';
 import { generateMultiDeploymentYaml } from './utils/yamlGenerator';
-import type { DeploymentConfig, Namespace } from './types';
+import type { DeploymentConfig, Namespace, ConfigMap, Secret } from './types';
 
 type PreviewMode = 'visual' | 'yaml' | 'summary';
-type SidebarTab = 'deployments' | 'namespaces';
+type SidebarTab = 'deployments' | 'namespaces' | 'configmaps' | 'secrets';
 
 function App() {
   const [deployments, setDeployments] = useState<DeploymentConfig[]>([]);
@@ -26,12 +30,18 @@ function App() {
       createdAt: new Date().toISOString()
     }
   ]);
+  const [configMaps, setConfigMaps] = useState<ConfigMap[]>([]);
+  const [secrets, setSecrets] = useState<Secret[]>([]);
   const [selectedDeployment, setSelectedDeployment] = useState<number>(0);
   const [selectedNamespace, setSelectedNamespace] = useState<number>(0);
+  const [selectedConfigMap, setSelectedConfigMap] = useState<number>(0);
+  const [selectedSecret, setSelectedSecret] = useState<number>(0);
   const [previewMode, setPreviewMode] = useState<PreviewMode>('visual');
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('deployments');
   const [showForm, setShowForm] = useState(false);
   const [showNamespaceManager, setShowNamespaceManager] = useState(false);
+  const [showConfigMapManager, setShowConfigMapManager] = useState(false);
+  const [showSecretManager, setShowSecretManager] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const currentConfig = deployments[selectedDeployment] || {
@@ -57,6 +67,8 @@ function App() {
     volumes: [],
     configMaps: [],
     secrets: [],
+    selectedConfigMaps: [],
+    selectedSecrets: [],
     ingress: {
       enabled: false,
       className: '',
@@ -106,6 +118,8 @@ function App() {
       volumes: [],
       configMaps: [],
       secrets: [],
+      selectedConfigMaps: [],
+      selectedSecrets: [],
       ingress: {
         enabled: false,
         className: '',
@@ -161,6 +175,7 @@ function App() {
     setSelectedDeployment(index + 1);
   };
 
+  // Namespace management
   const handleAddNamespace = (namespace: Namespace) => {
     setNamespaces([...namespaces, namespace]);
     setShowNamespaceManager(false);
@@ -185,6 +200,14 @@ function App() {
     );
     setDeployments(updatedDeployments);
 
+    // Move any ConfigMaps/Secrets using this namespace to 'default'
+    setConfigMaps(configMaps.map(cm => 
+      cm.namespace === namespaceName ? { ...cm, namespace: 'default' } : cm
+    ));
+    setSecrets(secrets.map(secret => 
+      secret.namespace === namespaceName ? { ...secret, namespace: 'default' } : secret
+    ));
+
     // Adjust selected namespace index
     const namespaceIndex = namespaces.findIndex(ns => ns.name === namespaceName);
     if (selectedNamespace >= namespaceIndex) {
@@ -206,6 +229,90 @@ function App() {
     setSelectedNamespace(index + 1);
   };
 
+  // ConfigMap management
+  const handleAddConfigMap = (configMap: ConfigMap) => {
+    setConfigMaps([...configMaps, configMap]);
+    setShowConfigMapManager(false);
+    setSidebarTab('configmaps');
+    setSelectedConfigMap(configMaps.length);
+  };
+
+  const handleDeleteConfigMap = (configMapName: string) => {
+    setConfigMaps(configMaps.filter(cm => cm.name !== configMapName));
+    
+    // Remove references from deployments
+    const updatedDeployments = deployments.map(deployment => ({
+      ...deployment,
+      selectedConfigMaps: deployment.selectedConfigMaps.filter(name => name !== configMapName),
+      volumes: deployment.volumes.filter(v => v.type !== 'configMap' || v.configMapName !== configMapName)
+    }));
+    setDeployments(updatedDeployments);
+
+    // Adjust selected index
+    const configMapIndex = configMaps.findIndex(cm => cm.name === configMapName);
+    if (selectedConfigMap >= configMapIndex) {
+      setSelectedConfigMap(Math.max(0, selectedConfigMap - 1));
+    }
+  };
+
+  const handleDuplicateConfigMap = (index: number) => {
+    const configMapToDuplicate = configMaps[index];
+    const duplicatedConfigMap: ConfigMap = {
+      ...configMapToDuplicate,
+      name: `${configMapToDuplicate.name}-copy`,
+      createdAt: new Date().toISOString()
+    };
+    
+    const newConfigMaps = [...configMaps];
+    newConfigMaps.splice(index + 1, 0, duplicatedConfigMap);
+    setConfigMaps(newConfigMaps);
+    setSelectedConfigMap(index + 1);
+  };
+
+  // Secret management
+  const handleAddSecret = (secret: Secret) => {
+    setSecrets([...secrets, secret]);
+    setShowSecretManager(false);
+    setSidebarTab('secrets');
+    setSelectedSecret(secrets.length);
+  };
+
+  const handleDeleteSecret = (secretName: string) => {
+    setSecrets(secrets.filter(s => s.name !== secretName));
+    
+    // Remove references from deployments
+    const updatedDeployments = deployments.map(deployment => ({
+      ...deployment,
+      selectedSecrets: deployment.selectedSecrets.filter(name => name !== secretName),
+      volumes: deployment.volumes.filter(v => v.type !== 'secret' || v.secretName !== secretName),
+      ingress: {
+        ...deployment.ingress,
+        tls: deployment.ingress.tls.filter(tls => tls.secretName !== secretName)
+      }
+    }));
+    setDeployments(updatedDeployments);
+
+    // Adjust selected index
+    const secretIndex = secrets.findIndex(s => s.name === secretName);
+    if (selectedSecret >= secretIndex) {
+      setSelectedSecret(Math.max(0, selectedSecret - 1));
+    }
+  };
+
+  const handleDuplicateSecret = (index: number) => {
+    const secretToDuplicate = secrets[index];
+    const duplicatedSecret: Secret = {
+      ...secretToDuplicate,
+      name: `${secretToDuplicate.name}-copy`,
+      createdAt: new Date().toISOString()
+    };
+    
+    const newSecrets = [...secrets];
+    newSecrets.splice(index + 1, 0, duplicatedSecret);
+    setSecrets(newSecrets);
+    setSelectedSecret(index + 1);
+  };
+
   const handleDownload = async () => {
     if (deployments.length === 0) {
       return;
@@ -217,7 +324,7 @@ function App() {
       return;
     }
     
-    const yaml = generateMultiDeploymentYaml(validDeployments, namespaces);
+    const yaml = generateMultiDeploymentYaml(validDeployments, namespaces, configMaps, secrets);
     const blob = new Blob([yaml], { type: 'text/yaml' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -237,12 +344,12 @@ function App() {
 
   // Generate YAML for preview based on mode
   const getPreviewYaml = () => {
-    if (deployments.length === 0 && namespaces.length <= 1) {
+    if (deployments.length === 0 && namespaces.length <= 1 && configMaps.length === 0 && secrets.length === 0) {
       return '# No deployments configured\n# Create your first deployment to see the generated YAML';
     }
     
     const validDeployments = deployments.filter(d => d.appName);
-    return generateMultiDeploymentYaml(validDeployments, namespaces);
+    return generateMultiDeploymentYaml(validDeployments, namespaces, configMaps, secrets);
   };
 
   const previewModes = [
@@ -301,6 +408,14 @@ function App() {
                   <Database className="w-4 h-4" />
                   <span>{namespaces.length} namespace{namespaces.length !== 1 ? 's' : ''}</span>
                 </div>
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <Settings className="w-4 h-4" />
+                  <span>{configMaps.length} configmap{configMaps.length !== 1 ? 's' : ''}</span>
+                </div>
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <Key className="w-4 h-4" />
+                  <span>{secrets.length} secret{secrets.length !== 1 ? 's' : ''}</span>
+                </div>
                 <SocialShare />
               </div>
               
@@ -330,11 +445,19 @@ function App() {
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <FileText className="w-4 h-4" />
-                <span>{deployments.length} deployment{deployments.length !== 1 ? 's' : ''}</span>
+                <span>{deployments.length}</span>
               </div>
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <Database className="w-4 h-4" />
-                <span>{namespaces.length} namespace{namespaces.length !== 1 ? 's' : ''}</span>
+                <span>{namespaces.length}</span>
+              </div>
+              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <Settings className="w-4 h-4" />
+                <span>{configMaps.length}</span>
+              </div>
+              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <Key className="w-4 h-4" />
+                <span>{secrets.length}</span>
               </div>
             </div>
             <SocialShare />
@@ -362,42 +485,64 @@ function App() {
         `}>
           {/* Tab Headers */}
           <div className="p-4 border-b border-gray-200 flex-shrink-0">
-            <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+            <div className="grid grid-cols-2 gap-1 bg-gray-100 rounded-lg p-1">
               <button
                 onClick={() => setSidebarTab('deployments')}
-                className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                className={`flex items-center justify-center space-x-1 px-2 py-2 rounded-md text-xs font-medium transition-all duration-200 ${
                   sidebarTab === 'deployments'
                     ? 'bg-white text-blue-600 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                <FileText className="w-4 h-4" />
+                <FileText className="w-3 h-3" />
                 <span>Deployments</span>
               </button>
               <button
                 onClick={() => setSidebarTab('namespaces')}
-                className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                className={`flex items-center justify-center space-x-1 px-2 py-2 rounded-md text-xs font-medium transition-all duration-200 ${
                   sidebarTab === 'namespaces'
                     ? 'bg-white text-purple-600 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                <Database className="w-4 h-4" />
+                <Database className="w-3 h-3" />
                 <span>Namespaces</span>
+              </button>
+              <button
+                onClick={() => setSidebarTab('configmaps')}
+                className={`flex items-center justify-center space-x-1 px-2 py-2 rounded-md text-xs font-medium transition-all duration-200 ${
+                  sidebarTab === 'configmaps'
+                    ? 'bg-white text-green-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <Settings className="w-3 h-3" />
+                <span>ConfigMaps</span>
+              </button>
+              <button
+                onClick={() => setSidebarTab('secrets')}
+                className={`flex items-center justify-center space-x-1 px-2 py-2 rounded-md text-xs font-medium transition-all duration-200 ${
+                  sidebarTab === 'secrets'
+                    ? 'bg-white text-orange-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <Key className="w-3 h-3" />
+                <span>Secrets</span>
               </button>
             </div>
           </div>
 
           {/* Tab Content */}
           <div className="flex-1 overflow-y-auto">
-            {sidebarTab === 'deployments' ? (
+            {sidebarTab === 'deployments' && (
               deployments.length > 0 ? (
                 <DeploymentsList
                   deployments={deployments}
                   selectedIndex={selectedDeployment}
                   onSelect={(index) => {
                     setSelectedDeployment(index);
-                    setSidebarOpen(false); // Close sidebar on mobile after selection
+                    setSidebarOpen(false);
                   }}
                   onEdit={() => setShowForm(true)}
                   onDelete={handleDeleteDeployment}
@@ -421,18 +566,81 @@ function App() {
                   </button>
                 </div>
               )
-            ) : (
-              <NamespacesList
-                namespaces={namespaces}
-                selectedIndex={selectedNamespace}
-                onSelect={(index) => {
-                  setSelectedNamespace(index);
-                  setSidebarOpen(false); // Close sidebar on mobile after selection
-                }}
-                onEdit={() => setShowNamespaceManager(true)}
-                onDelete={handleDeleteNamespace}
-                onDuplicate={handleDuplicateNamespace}
-              />
+            )}
+
+            {sidebarTab === 'namespaces' && (
+              <div className="space-y-4">
+                <div className="p-4 border-b border-gray-200">
+                  <button
+                    onClick={() => setShowNamespaceManager(true)}
+                    className="w-full inline-flex items-center justify-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200 text-sm font-medium"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Namespace
+                  </button>
+                </div>
+                <NamespacesList
+                  namespaces={namespaces}
+                  selectedIndex={selectedNamespace}
+                  onSelect={(index) => {
+                    setSelectedNamespace(index);
+                    setSidebarOpen(false);
+                  }}
+                  onEdit={() => setShowNamespaceManager(true)}
+                  onDelete={handleDeleteNamespace}
+                  onDuplicate={handleDuplicateNamespace}
+                />
+              </div>
+            )}
+
+            {sidebarTab === 'configmaps' && (
+              <div className="space-y-4">
+                <div className="p-4 border-b border-gray-200">
+                  <button
+                    onClick={() => setShowConfigMapManager(true)}
+                    className="w-full inline-flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 text-sm font-medium"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add ConfigMap
+                  </button>
+                </div>
+                <ConfigMapsList
+                  configMaps={configMaps}
+                  selectedIndex={selectedConfigMap}
+                  onSelect={(index) => {
+                    setSelectedConfigMap(index);
+                    setSidebarOpen(false);
+                  }}
+                  onEdit={() => setShowConfigMapManager(true)}
+                  onDelete={handleDeleteConfigMap}
+                  onDuplicate={handleDuplicateConfigMap}
+                />
+              </div>
+            )}
+
+            {sidebarTab === 'secrets' && (
+              <div className="space-y-4">
+                <div className="p-4 border-b border-gray-200">
+                  <button
+                    onClick={() => setShowSecretManager(true)}
+                    className="w-full inline-flex items-center justify-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors duration-200 text-sm font-medium"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Secret
+                  </button>
+                </div>
+                <SecretsList
+                  secrets={secrets}
+                  selectedIndex={selectedSecret}
+                  onSelect={(index) => {
+                    setSelectedSecret(index);
+                    setSidebarOpen(false);
+                  }}
+                  onEdit={() => setShowSecretManager(true)}
+                  onDelete={handleDeleteSecret}
+                  onDuplicate={handleDuplicateSecret}
+                />
+              </div>
             )}
           </div>
         </div>
@@ -511,6 +719,8 @@ function App() {
                 config={currentConfig} 
                 onChange={handleConfigChange}
                 availableNamespaces={availableNamespaces}
+                availableConfigMaps={configMaps}
+                availableSecrets={secrets}
               />
             </div>
             
@@ -540,6 +750,28 @@ function App() {
           onAddNamespace={handleAddNamespace}
           onDeleteNamespace={handleDeleteNamespace}
           onClose={() => setShowNamespaceManager(false)}
+        />
+      )}
+
+      {/* ConfigMap Manager Modal */}
+      {showConfigMapManager && (
+        <ConfigMapManager
+          configMaps={configMaps}
+          namespaces={availableNamespaces}
+          onAddConfigMap={handleAddConfigMap}
+          onDeleteConfigMap={handleDeleteConfigMap}
+          onClose={() => setShowConfigMapManager(false)}
+        />
+      )}
+
+      {/* Secret Manager Modal */}
+      {showSecretManager && (
+        <SecretManager
+          secrets={secrets}
+          namespaces={availableNamespaces}
+          onAddSecret={handleAddSecret}
+          onDeleteSecret={handleDeleteSecret}
+          onClose={() => setShowSecretManager(false)}
         />
       )}
     </div>
