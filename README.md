@@ -305,26 +305,6 @@ If this project helped you, please consider giving it a ⭐ on GitHub!
 - **🐦 Twitter:** [@Same7Ammar](https://x.com/Same7Ammar)
 - **💼 LinkedIn:** [Same Hammar](https://www.linkedin.com/in/samehammar/)
 
-## 🎯 Roadmap
-
-### Q1 2025
-- [ ] StatefulSet support
-- [ ] PersistentVolume management
-- [ ] HorizontalPodAutoscaler configuration
-- [ ] NetworkPolicy editor
-
-### Q2 2025
-- [ ] Helm chart generation
-- [ ] Kustomize support
-- [ ] GitOps integration
-- [ ] Cluster resource monitoring
-
-### Q3 2025
-- [ ] Multi-cluster support
-- [ ] Resource cost estimation
-- [ ] Security scanning
-- [ ] Performance optimization suggestions
-
 ---
 
 <div align="center">
