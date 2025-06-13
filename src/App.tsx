@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Download, Eye, FileText, List, Plus, Menu, X, Database } from 'lucide-react';
+import { Download, Eye, FileText, List, Plus, Menu, X, Database, Server, Globe, Shield, Key, HardDrive } from 'lucide-react';
 import { DeploymentForm } from './components/DeploymentForm';
 import { YamlPreview } from './components/YamlPreview';
 import { ResourceSummary } from './components/ResourceSummary';
@@ -10,11 +10,12 @@ import { Footer } from './components/Footer';
 import { SocialShare } from './components/SocialShare';
 import { SEOHead } from './components/SEOHead';
 import { NamespaceManager } from './components/NamespaceManager';
+import { KubernetesResourcesPanel } from './components/KubernetesResourcesPanel';
 import { generateMultiDeploymentYaml } from './utils/yamlGenerator';
 import type { DeploymentConfig, Namespace } from './types';
 
 type PreviewMode = 'visual' | 'yaml' | 'summary';
-type SidebarTab = 'deployments' | 'namespaces';
+type SidebarTab = 'deployments' | 'namespaces' | 'resources';
 
 function App() {
   const [deployments, setDeployments] = useState<DeploymentConfig[]>([]);
@@ -29,7 +30,7 @@ function App() {
   const [selectedDeployment, setSelectedDeployment] = useState<number>(0);
   const [selectedNamespace, setSelectedNamespace] = useState<number>(0);
   const [previewMode, setPreviewMode] = useState<PreviewMode>('visual');
-  const [sidebarTab, setSidebarTab] = useState<SidebarTab>('deployments');
+  const [sidebarTab, setSidebarTab] = useState<SidebarTab>('resources');
   const [showForm, setShowForm] = useState(false);
   const [showNamespaceManager, setShowNamespaceManager] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -169,6 +170,72 @@ function App() {
     newNamespaces.splice(index + 1, 0, duplicatedNamespace);
     setNamespaces(newNamespaces);
     setSelectedNamespace(index + 1);
+  };
+
+  const handleResourceAction = (resourceType: string) => {
+    switch (resourceType) {
+      case 'deployment':
+        handleAddDeployment();
+        break;
+      case 'service':
+        // If no deployment exists, create one first
+        if (deployments.length === 0) {
+          handleAddDeployment();
+        } else {
+          // Edit current deployment to configure service
+          setShowForm(true);
+        }
+        break;
+      case 'configmap':
+        // Add a new ConfigMap to current deployment
+        if (deployments.length === 0) {
+          handleAddDeployment();
+        } else {
+          const updatedConfig = {
+            ...currentConfig,
+            configMaps: [...currentConfig.configMaps, { name: '', data: {} }]
+          };
+          handleConfigChange(updatedConfig);
+          setShowForm(true);
+        }
+        break;
+      case 'secret':
+        // Add a new Secret to current deployment
+        if (deployments.length === 0) {
+          handleAddDeployment();
+        } else {
+          const updatedConfig = {
+            ...currentConfig,
+            secrets: [...currentConfig.secrets, { name: '', data: {} }]
+          };
+          handleConfigChange(updatedConfig);
+          setShowForm(true);
+        }
+        break;
+      case 'persistentvolume':
+        // Add a new Volume to current deployment
+        if (deployments.length === 0) {
+          handleAddDeployment();
+        } else {
+          const updatedConfig = {
+            ...currentConfig,
+            volumes: [...currentConfig.volumes, { name: '', mountPath: '', type: 'emptyDir' }]
+          };
+          handleConfigChange(updatedConfig);
+          setShowForm(true);
+        }
+        break;
+      case 'ingress':
+        // For now, just show form to configure service
+        if (deployments.length === 0) {
+          handleAddDeployment();
+        } else {
+          setShowForm(true);
+        }
+        break;
+      default:
+        console.log(`Resource type ${resourceType} not implemented yet`);
+    }
   };
 
   const handleDownload = async () => {
@@ -329,6 +396,17 @@ function App() {
           <div className="p-4 border-b border-gray-200 flex-shrink-0">
             <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
               <button
+                onClick={() => setSidebarTab('resources')}
+                className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                  sidebarTab === 'resources'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <Server className="w-4 h-4" />
+                <span>Resources</span>
+              </button>
+              <button
                 onClick={() => setSidebarTab('deployments')}
                 className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
                   sidebarTab === 'deployments'
@@ -355,7 +433,9 @@ function App() {
 
           {/* Tab Content */}
           <div className="flex-1 overflow-y-auto">
-            {sidebarTab === 'deployments' ? (
+            {sidebarTab === 'resources' ? (
+              <KubernetesResourcesPanel onResourceAction={handleResourceAction} />
+            ) : sidebarTab === 'deployments' ? (
               deployments.length > 0 ? (
                 <DeploymentsList
                   deployments={deployments}
