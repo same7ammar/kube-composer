@@ -36,7 +36,17 @@ function App() {
 
   const currentConfig = deployments[selectedDeployment] || {
     appName: '',
-    image: '',
+    containers: [{
+      name: '',
+      image: '',
+      port: 8080,
+      env: [],
+      resources: {
+        requests: { cpu: '', memory: '' },
+        limits: { cpu: '', memory: '' }
+      },
+      volumeMounts: []
+    }],
     replicas: 1,
     port: 80,
     targetPort: 8080,
@@ -44,11 +54,6 @@ function App() {
     namespace: 'default',
     labels: {},
     annotations: {},
-    resources: {
-      requests: { cpu: '', memory: '' },
-      limits: { cpu: '', memory: '' }
-    },
-    env: [],
     volumes: [],
     configMaps: [],
     secrets: []
@@ -73,7 +78,17 @@ function App() {
   const handleAddDeployment = () => {
     const newDeployment: DeploymentConfig = {
       appName: '',
-      image: '',
+      containers: [{
+        name: '',
+        image: '',
+        port: 8080,
+        env: [],
+        resources: {
+          requests: { cpu: '', memory: '' },
+          limits: { cpu: '', memory: '' }
+        },
+        volumeMounts: []
+      }],
       replicas: 1,
       port: 80,
       targetPort: 8080,
@@ -81,11 +96,6 @@ function App() {
       namespace: 'default',
       labels: {},
       annotations: {},
-      resources: {
-        requests: { cpu: '', memory: '' },
-        limits: { cpu: '', memory: '' }
-      },
-      env: [],
       volumes: [],
       configMaps: [],
       secrets: []
@@ -117,7 +127,11 @@ function App() {
     const deploymentToDuplicate = deployments[index];
     const duplicatedDeployment: DeploymentConfig = {
       ...deploymentToDuplicate,
-      appName: `${deploymentToDuplicate.appName}-copy`
+      appName: `${deploymentToDuplicate.appName}-copy`,
+      containers: deploymentToDuplicate.containers.map(container => ({
+        ...container,
+        name: container.name ? `${container.name}-copy` : ''
+      }))
     };
     
     const newDeployments = [...deployments];
@@ -456,7 +470,7 @@ function App() {
       {/* Deployment Form Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
             {/* Modal Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
               <h3 className="text-xl font-semibold text-gray-900">

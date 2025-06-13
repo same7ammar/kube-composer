@@ -1,4 +1,4 @@
-import type { DeploymentConfig, KubernetesResource, Namespace } from '../types';
+import type { DeploymentConfig, KubernetesResource, Namespace, Container } from '../types';
 
 export function generateKubernetesYaml(config: DeploymentConfig): string {
   if (!config.appName) {
@@ -35,43 +35,7 @@ export function generateKubernetesYaml(config: DeploymentConfig): string {
           }
         },
         spec: {
-          containers: [
-            {
-              name: config.appName,
-              image: config.image,
-              ports: [
-                {
-                  containerPort: config.targetPort
-                }
-              ],
-              ...(config.env.length > 0 && {
-                env: config.env.map(e => ({ name: e.name, value: e.value }))
-              }),
-              ...(config.volumes.length > 0 && {
-                volumeMounts: config.volumes.map(v => ({
-                  name: v.name,
-                  mountPath: v.mountPath
-                }))
-              }),
-              ...((config.resources.requests.cpu || config.resources.requests.memory || 
-                  config.resources.limits.cpu || config.resources.limits.memory) && {
-                resources: {
-                  ...(config.resources.requests.cpu || config.resources.requests.memory) && {
-                    requests: {
-                      ...(config.resources.requests.cpu && { cpu: config.resources.requests.cpu }),
-                      ...(config.resources.requests.memory && { memory: config.resources.requests.memory })
-                    }
-                  },
-                  ...(config.resources.limits.cpu || config.resources.limits.memory) && {
-                    limits: {
-                      ...(config.resources.limits.cpu && { cpu: config.resources.limits.cpu }),
-                      ...(config.resources.limits.memory && { memory: config.resources.limits.memory })
-                    }
-                  }
-                }
-              })
-            }
-          ],
+          containers: generateContainers(config),
           ...(config.volumes.length > 0 && {
             volumes: config.volumes.map(v => ({
               name: v.name,
@@ -103,13 +67,7 @@ export function generateKubernetesYaml(config: DeploymentConfig): string {
       selector: {
         app: config.appName
       },
-      ports: [
-        {
-          port: config.port,
-          targetPort: config.targetPort,
-          protocol: 'TCP'
-        }
-      ],
+      ports: generateServicePorts(config),
       type: config.serviceType
     }
   };
@@ -160,6 +118,114 @@ export function generateKubernetesYaml(config: DeploymentConfig): string {
     const yaml = objectToYaml(resource);
     return yaml;
   }).join('\n---\n');
+}
+
+function generateContainers(config: DeploymentConfig): any[] {
+  // Use new containers array if available, otherwise fall back to legacy fields
+  if (config.containers && config.containers.length > 0) {
+    return config.containers.map(container => ({
+      name: container.name || 'app',
+      image: container.image,
+      ...(container.port && {
+        ports: [{ containerPort: container.port }]
+      }),
+      ...(container.env.length > 0 && {
+        env: container.env.map(e => ({ name: e.name, value: e.value }))
+      }),
+      ...(container.volumeMounts.length > 0 && {
+        volumeMounts: container.volumeMounts.map(vm => ({
+          name: vm.name,
+          mountPath: vm.mountPath
+        }))
+      }),
+      ...((container.resources.requests.cpu || container.resources.requests.memory || 
+          container.resources.limits.cpu || container.resources.limits.memory) && {
+        resources: {
+          ...(container.resources.requests.cpu || container.resources.requests.memory) && {
+            requests: {
+              ...(container.resources.requests.cpu && { cpu: container.resources.requests.cpu }),
+              ...(container.resources.requests.memory && { memory: container.resources.requests.memory })
+            }
+          },
+          ...(container.resources.limits.cpu || container.resources.limits.memory) && {
+            limits: {
+              ...(container.resources.limits.cpu && { cpu: container.resources.limits.cpu }),
+              ...(container.resources.limits.memory && { memory: container.resources.limits.memory })
+            }
+          }
+        }
+      })
+    }));
+  }
+
+  // Legacy fallback for backward compatibility
+  return [{
+    name: config.appName || 'app',
+    image: config.image || '',
+    ports: [{ containerPort: config.targetPort }],
+    ...(config.env && config.env.length > 0 && {
+      env: config.env.map(e => ({ name: e.name, value: e.value }))
+    }),
+    ...(config.volumes.length > 0 && {
+      volumeMounts: config.volumes.map(v => ({
+        name: v.name,
+        mountPath: v.mountPath
+      }))
+    }),
+    ...(config.resources && (config.resources.requests.cpu || config.resources.requests.memory || 
+        config.resources.limits.cpu || config.resources.limits.memory) && {
+      resources: {
+        ...(config.resources.requests.cpu || config.resources.requests.memory) && {
+          requests: {
+            ...(config.resources.requests.cpu && { cpu: config.resources.requests.cpu }),
+            ...(config.resources.requests.memory && { memory: config.resources.requests.memory })
+          }
+        },
+        ...(config.resources.limits.cpu || config.resources.limits.memory) && {
+          limits: {
+            ...(config.resources.limits.cpu && { cpu: config.resources.limits.cpu }),
+            ...(config.resources.limits.memory && { memory: config.resources.limits.memory })
+          }
+        }
+      }
+    })
+  }];
+}
+
+function generateServicePorts(config: DeploymentConfig): any[] {
+  // If using new containers structure, generate ports for all containers
+  if (config.containers && config.containers.length > 0) {
+    const ports = [];
+    
+    // Add main service port
+    ports.push({
+      port: config.port,
+      targetPort: config.targetPort,
+      protocol: 'TCP',
+      name: 'http'
+    });
+
+    // Add additional ports for containers that have different ports
+    config.containers.forEach((container, index) => {
+      if (container.port && container.port !== config.targetPort) {
+        ports.push({
+          port: container.port,
+          targetPort: container.port,
+          protocol: 'TCP',
+          name: `${container.name || `container-${index}`}-port`
+        });
+      }
+    });
+
+    return ports;
+  }
+
+  // Legacy fallback
+  return [{
+    port: config.port,
+    targetPort: config.targetPort,
+    protocol: 'TCP'
+  }];
 }
 
 export function generateNamespaceYaml(namespaces: Namespace[]): string {
@@ -237,6 +303,7 @@ export function generateMultiDeploymentYaml(deployments: DeploymentConfig[], nam
 #
 # Features:
 # - Visual deployment editor
+# - Multi-container support
 # - Multi-deployment support  
 # - Real-time YAML generation
 # - Architecture visualization
@@ -275,6 +342,8 @@ data:
     }
     if (deployments.length > 0) {
       allResources.push(`# Deployments: ${deployments.filter(d => d.appName).length}`);
+      const totalContainers = deployments.reduce((sum, d) => sum + (d.containers?.length || 1), 0);
+      allResources.push(`# Total Containers: ${totalContainers}`);
     }
     allResources.push('');
   }
@@ -333,7 +402,9 @@ data:
         }
         
         if (validDeployments.length > 1) {
+          const containerCount = deployment.containers?.length || 1;
           allResources.push(`# === ${deployment.appName.toUpperCase()} DEPLOYMENT ===`);
+          allResources.push(`# Containers: ${containerCount}`);
         }
         
         const deploymentYaml = generateKubernetesYaml(deployment);

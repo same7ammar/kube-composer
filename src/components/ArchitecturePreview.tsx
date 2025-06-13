@@ -14,6 +14,7 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
   const validDeployments = deployments.filter(d => d.appName);
   const totalPods = validDeployments.reduce((sum, d) => sum + d.replicas, 0);
   const totalServices = validDeployments.length;
+  const totalContainers = validDeployments.reduce((sum, d) => sum + (d.containers?.length || 1), 0);
   const totalConfigMaps = validDeployments.reduce((sum, d) => sum + d.configMaps.length, 0);
 
   const namespaces = [...new Set(validDeployments.map(d => d.namespace))];
@@ -42,12 +43,12 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
   };
 
   const getHealthStatus = (deployment: DeploymentConfig) => {
-    const hasImage = !!deployment.image;
-    const hasResources = !!(deployment.resources.requests.cpu || deployment.resources.requests.memory);
+    const hasContainers = deployment.containers && deployment.containers.length > 0;
+    const hasValidContainers = hasContainers && deployment.containers.every(c => c.name && c.image);
     const hasProperPorts = deployment.port > 0 && deployment.targetPort > 0;
     
-    if (hasImage && hasResources && hasProperPorts) return { status: 'healthy', color: 'green' };
-    if (hasImage && hasProperPorts) return { status: 'warning', color: 'yellow' };
+    if (hasValidContainers && hasProperPorts) return { status: 'healthy', color: 'green' };
+    if (hasContainers && hasProperPorts) return { status: 'warning', color: 'yellow' };
     return { status: 'error', color: 'red' };
   };
 
@@ -114,6 +115,13 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
           </div>
           <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
             <div className="flex items-center space-x-2 mb-2">
+              <Database className="w-5 h-5 text-purple-200" />
+              <span className="text-sm text-blue-100">Containers</span>
+            </div>
+            <div className="text-2xl font-bold">{totalContainers}</div>
+          </div>
+          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+            <div className="flex items-center space-x-2 mb-2">
               <Activity className="w-5 h-5 text-green-200" />
               <span className="text-sm text-blue-100">Pods</span>
             </div>
@@ -121,17 +129,10 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
           </div>
           <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
             <div className="flex items-center space-x-2 mb-2">
-              <Globe className="w-5 h-5 text-purple-200" />
+              <Globe className="w-5 h-5 text-orange-200" />
               <span className="text-sm text-blue-100">Services</span>
             </div>
             <div className="text-2xl font-bold">{totalServices}</div>
-          </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
-            <div className="flex items-center space-x-2 mb-2">
-              <Database className="w-5 h-5 text-orange-200" />
-              <span className="text-sm text-blue-100">ConfigMaps</span>
-            </div>
-            <div className="text-2xl font-bold">{totalConfigMaps}</div>
           </div>
           <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
             <div className="flex items-center space-x-2 mb-2">
@@ -183,6 +184,7 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
         .map(namespace => {
           const namespaceDeployments = validDeployments.filter(d => d.namespace === namespace);
           const namespacePods = namespaceDeployments.reduce((sum, d) => sum + d.replicas, 0);
+          const namespaceContainers = namespaceDeployments.reduce((sum, d) => sum + (d.containers?.length || 1), 0);
           
           return (
             <div key={namespace} className="bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden">
@@ -196,7 +198,7 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
                     <div>
                       <h4 className="font-bold text-gray-900 text-lg">Namespace: {namespace}</h4>
                       <p className="text-sm text-gray-600">
-                        {namespaceDeployments.length} deployment{namespaceDeployments.length !== 1 ? 's' : ''} • {namespacePods} pod{namespacePods !== 1 ? 's' : ''}
+                        {namespaceDeployments.length} deployment{namespaceDeployments.length !== 1 ? 's' : ''} • {namespaceContainers} container{namespaceContainers !== 1 ? 's' : ''} • {namespacePods} pod{namespacePods !== 1 ? 's' : ''}
                       </p>
                     </div>
                   </div>
@@ -213,6 +215,7 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
                   const globalIndex = validDeployments.indexOf(deployment);
                   const isExpanded = showDetails && expandedDeployments.has(globalIndex);
                   const health = getHealthStatus(deployment);
+                  const containerCount = deployment.containers?.length || 1;
                   
                   return (
                     <div key={index} className="border border-gray-200 rounded-xl overflow-hidden bg-gradient-to-r from-gray-50 to-white shadow-sm hover:shadow-md transition-all duration-300">
@@ -233,8 +236,13 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
                                 <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getServiceTypeColor(deployment.serviceType)}`}>
                                   {deployment.serviceType}
                                 </span>
+                                <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
+                                  {containerCount} container{containerCount !== 1 ? 's' : ''}
+                                </span>
                               </div>
-                              <p className="text-sm text-gray-500 truncate">{deployment.image}</p>
+                              <p className="text-sm text-gray-500 truncate">
+                                {deployment.containers?.[0]?.image || 'No image specified'}
+                              </p>
                             </div>
                           </div>
                           <div className="flex items-center space-x-3">
@@ -280,6 +288,7 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
                                     <div key={podIndex} className="bg-white rounded-lg p-2 border border-green-200 text-center group hover:bg-green-50 transition-colors duration-200">
                                       <div className="w-4 h-4 bg-green-500 rounded mx-auto mb-1 group-hover:scale-110 transition-transform duration-200" />
                                       <div className="text-xs text-green-700">Pod {podIndex + 1}</div>
+                                      <div className="text-xs text-green-600">{containerCount}c</div>
                                     </div>
                                   ))}
                                   {deployment.replicas > 8 && (
@@ -290,30 +299,32 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
                                 </div>
                               </div>
 
-                              {/* Enhanced Resource Metrics */}
-                              {(deployment.resources.requests.cpu || deployment.resources.requests.memory) && (
-                                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                              {/* Container Details */}
+                              {deployment.containers && deployment.containers.length > 0 && (
+                                <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
                                   <div className="flex items-center space-x-2 mb-3">
-                                    <Cpu className="w-4 h-4 text-blue-600" />
-                                    <span className="text-sm font-medium text-blue-900">Resource Allocation</span>
+                                    <Database className="w-4 h-4 text-purple-600" />
+                                    <span className="text-sm font-medium text-purple-900">Containers</span>
                                   </div>
-                                  <div className="grid grid-cols-2 gap-3">
-                                    {deployment.resources.requests.cpu && (
-                                      <div className="bg-white rounded p-2 border border-blue-200">
-                                        <div className="text-xs text-blue-600 mb-1">CPU</div>
-                                        <div className="text-sm font-medium text-blue-900">
-                                          {deployment.resources.requests.cpu}
-                                          {deployment.resources.limits.cpu && ` / ${deployment.resources.limits.cpu}`}
+                                  <div className="space-y-2">
+                                    {deployment.containers.slice(0, 3).map((container, containerIndex) => (
+                                      <div key={containerIndex} className="bg-white rounded p-2 border border-purple-200">
+                                        <div className="text-xs text-purple-900 font-medium">
+                                          {container.name || `Container ${containerIndex + 1}`}
                                         </div>
+                                        <div className="text-xs text-purple-600 truncate">
+                                          {container.image}
+                                        </div>
+                                        {container.port && (
+                                          <div className="text-xs text-purple-500">
+                                            Port: {container.port}
+                                          </div>
+                                        )}
                                       </div>
-                                    )}
-                                    {deployment.resources.requests.memory && (
-                                      <div className="bg-white rounded p-2 border border-blue-200">
-                                        <div className="text-xs text-blue-600 mb-1">Memory</div>
-                                        <div className="text-sm font-medium text-blue-900">
-                                          {deployment.resources.requests.memory}
-                                          {deployment.resources.limits.memory && ` / ${deployment.resources.limits.memory}`}
-                                        </div>
+                                    ))}
+                                    {deployment.containers.length > 3 && (
+                                      <div className="text-xs text-purple-600 text-center">
+                                        +{deployment.containers.length - 3} more containers
                                       </div>
                                     )}
                                   </div>
@@ -324,8 +335,8 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
                             {/* Enhanced Service Section */}
                             <div className="space-y-4">
                               <div className="flex items-center space-x-2 mb-3">
-                                <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                                  <Globe className="w-4 h-4 text-purple-600" />
+                                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                  <Globe className="w-4 h-4 text-blue-600" />
                                 </div>
                                 <div>
                                   <h6 className="font-semibold text-gray-900">Service</h6>
@@ -333,28 +344,28 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
                                 </div>
                               </div>
                               
-                              <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+                              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                                 <div className="space-y-3">
                                   <div className="flex items-center justify-between">
-                                    <span className="text-sm font-medium text-purple-900">Service Name</span>
-                                    <span className="text-sm text-purple-700">{deployment.appName}-service</span>
+                                    <span className="text-sm font-medium text-blue-900">Service Name</span>
+                                    <span className="text-sm text-blue-700">{deployment.appName}-service</span>
                                   </div>
                                   <div className="flex items-center justify-between">
-                                    <span className="text-sm font-medium text-purple-900">Type</span>
+                                    <span className="text-sm font-medium text-blue-900">Type</span>
                                     <span className={`px-2 py-1 rounded text-xs font-medium ${getServiceTypeColor(deployment.serviceType)}`}>
                                       {deployment.serviceType}
                                     </span>
                                   </div>
-                                  <div className="bg-white rounded p-3 border border-purple-200">
+                                  <div className="bg-white rounded p-3 border border-blue-200">
                                     <div className="flex items-center space-x-2 mb-2">
-                                      <Network className="w-4 h-4 text-purple-600" />
-                                      <span className="text-sm font-medium text-purple-900">Port Mapping</span>
+                                      <Network className="w-4 h-4 text-blue-600" />
+                                      <span className="text-sm font-medium text-blue-900">Port Mapping</span>
                                     </div>
                                     <div className="text-center">
-                                      <div className="inline-flex items-center space-x-2 bg-purple-100 rounded-lg px-3 py-2">
-                                        <span className="text-sm font-mono text-purple-800">{deployment.port}</span>
-                                        <span className="text-purple-600">→</span>
-                                        <span className="text-sm font-mono text-purple-800">{deployment.targetPort}</span>
+                                      <div className="inline-flex items-center space-x-2 bg-blue-100 rounded-lg px-3 py-2">
+                                        <span className="text-sm font-mono text-blue-800">{deployment.port}</span>
+                                        <span className="text-blue-600">→</span>
+                                        <span className="text-sm font-mono text-blue-800">{deployment.targetPort}</span>
                                       </div>
                                     </div>
                                   </div>
@@ -362,19 +373,13 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
                               </div>
 
                               {/* Additional Resources */}
-                              {(deployment.env.length > 0 || deployment.volumes.length > 0) && (
+                              {deployment.volumes.length > 0 && (
                                 <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
                                   <div className="flex items-center space-x-2 mb-3">
                                     <HardDrive className="w-4 h-4 text-orange-600" />
                                     <span className="text-sm font-medium text-orange-900">Additional Resources</span>
                                   </div>
                                   <div className="space-y-2">
-                                    {deployment.env.length > 0 && (
-                                      <div className="flex items-center justify-between text-sm">
-                                        <span className="text-orange-700">Environment Variables</span>
-                                        <span className="text-orange-600 font-medium">{deployment.env.length}</span>
-                                      </div>
-                                    )}
                                     {deployment.volumes.length > 0 && (
                                       <div className="flex items-center justify-between text-sm">
                                         <span className="text-orange-700">Volumes</span>
@@ -407,7 +412,7 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
             <div className="text-sm text-indigo-700 space-y-2">
               <p>
                 Your Kubernetes architecture consists of <strong>{validDeployments.length}</strong> deployment{validDeployments.length !== 1 ? 's' : ''} 
-                running <strong>{totalPods}</strong> pod{totalPods !== 1 ? 's' : ''} across <strong>{namespaces.length}</strong> namespace{namespaces.length !== 1 ? 's' : ''}.
+                with <strong>{totalContainers}</strong> container{totalContainers !== 1 ? 's' : ''} running <strong>{totalPods}</strong> pod{totalPods !== 1 ? 's' : ''} across <strong>{namespaces.length}</strong> namespace{namespaces.length !== 1 ? 's' : ''}.
               </p>
               <p>
                 Each deployment manages container replicas and is exposed through services for network access. 
