@@ -271,14 +271,6 @@ function App() {
               
               {/* Action Buttons */}
               <button
-                onClick={() => setShowNamespaceManager(true)}
-                className="inline-flex items-center px-2 sm:px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200 text-sm font-medium"
-                title="Manage Kubernetes namespaces"
-              >
-                <Database className="w-4 h-4 sm:mr-1" />
-                <span className="hidden sm:inline">Namespaces</span>
-              </button>
-              <button
                 onClick={handleAddDeployment}
                 className="inline-flex items-center px-2 sm:px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 text-sm font-medium"
                 title="Add new deployment"
