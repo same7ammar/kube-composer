@@ -177,7 +177,28 @@ function generateContainers(config: DeploymentConfig): any[] {
         ports: [{ containerPort: container.port }]
       }),
       ...(container.env.length > 0 && {
-        env: container.env.map(e => ({ name: e.name, value: e.value }))
+        env: container.env.map(e => {
+          if (e.valueFrom) {
+            // Environment variable from ConfigMap or Secret
+            return {
+              name: e.name,
+              valueFrom: e.valueFrom.type === 'configMap' ? {
+                configMapKeyRef: {
+                  name: e.valueFrom.name,
+                  key: e.valueFrom.key
+                }
+              } : {
+                secretKeyRef: {
+                  name: e.valueFrom.name,
+                  key: e.valueFrom.key
+                }
+              }
+            };
+          } else {
+            // Direct value
+            return { name: e.name, value: e.value || '' };
+          }
+        })
       }),
       ...(container.volumeMounts.length > 0 && {
         volumeMounts: container.volumeMounts.map(vm => ({

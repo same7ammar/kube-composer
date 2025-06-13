@@ -1,4 +1,4 @@
-import { Plus, Minus, Server, Settings, Database, Key, Trash2, Copy, Globe, Shield, FileText } from 'lucide-react';
+import { Plus, Minus, Server, Settings, Database, Key, Trash2, Copy, Globe, Shield, FileText, ChevronDown } from 'lucide-react';
 import type { DeploymentConfig, Container, ConfigMap, Secret } from '../types';
 
 interface DeploymentFormProps {
@@ -70,12 +70,35 @@ export function DeploymentForm({ config, onChange, availableNamespaces, availabl
     updateConfig({ containers: newContainers });
   };
 
-  const updateContainerEnvVar = (containerIndex: number, envIndex: number, field: 'name' | 'value', value: string) => {
+  const updateContainerEnvVar = (containerIndex: number, envIndex: number, updates: Partial<Container['env'][0]>) => {
     const newContainers = [...config.containers];
     newContainers[containerIndex].env[envIndex] = {
       ...newContainers[containerIndex].env[envIndex],
-      [field]: value
+      ...updates
     };
+    updateConfig({ containers: newContainers });
+  };
+
+  const setEnvVarType = (containerIndex: number, envIndex: number, type: 'direct' | 'configMap' | 'secret') => {
+    const newContainers = [...config.containers];
+    const envVar = newContainers[containerIndex].env[envIndex];
+    
+    if (type === 'direct') {
+      // Remove valueFrom and keep only value
+      delete envVar.valueFrom;
+      if (!envVar.value) {
+        envVar.value = '';
+      }
+    } else {
+      // Remove direct value and add valueFrom
+      delete envVar.value;
+      envVar.valueFrom = {
+        type: type as 'configMap' | 'secret',
+        name: '',
+        key: ''
+      };
+    }
+    
     updateConfig({ containers: newContainers });
   };
 
@@ -241,6 +264,17 @@ export function DeploymentForm({ config, onChange, availableNamespaces, availabl
   // Filter ConfigMaps and Secrets by namespace
   const filteredConfigMaps = availableConfigMaps.filter(cm => cm.namespace === config.namespace);
   const filteredSecrets = availableSecrets.filter(s => s.namespace === config.namespace);
+
+  // Get available keys for a ConfigMap or Secret
+  const getAvailableKeys = (resourceName: string, type: 'configMap' | 'secret'): string[] => {
+    if (type === 'configMap') {
+      const configMap = filteredConfigMaps.find(cm => cm.name === resourceName);
+      return configMap ? Object.keys(configMap.data) : [];
+    } else {
+      const secret = filteredSecrets.find(s => s.name === resourceName);
+      return secret ? Object.keys(secret.data) : [];
+    }
+  };
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -463,7 +497,7 @@ export function DeploymentForm({ config, onChange, availableNamespaces, availabl
                 </div>
               </div>
 
-              {/* Container Environment Variables */}
+              {/* Enhanced Container Environment Variables */}
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-3">
                   <h5 className="text-sm font-medium text-gray-700">Environment Variables</h5>
@@ -477,29 +511,163 @@ export function DeploymentForm({ config, onChange, availableNamespaces, availabl
                 </div>
                 
                 {container.env.length > 0 && (
-                  <div className="space-y-2">
+                  <div className="space-y-4">
                     {container.env.map((envVar, envIndex) => (
-                      <div key={envIndex} className="flex items-center space-x-2">
-                        <input
-                          type="text"
-                          value={envVar.name}
-                          onChange={(e) => updateContainerEnvVar(containerIndex, envIndex, 'name', e.target.value)}
-                          className="flex-1 px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
-                          placeholder="Variable name"
-                        />
-                        <input
-                          type="text"
-                          value={envVar.value}
-                          onChange={(e) => updateContainerEnvVar(containerIndex, envIndex, 'value', e.target.value)}
-                          className="flex-1 px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
-                          placeholder="Variable value"
-                        />
-                        <button
-                          onClick={() => removeContainerEnvVar(containerIndex, envIndex)}
-                          className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors duration-200"
-                        >
-                          <Minus className="w-3 h-3" />
-                        </button>
+                      <div key={envIndex} className="border border-gray-200 rounded-lg p-4 bg-white">
+                        <div className="flex items-center justify-between mb-3">
+                          <h6 className="text-sm font-medium text-gray-900">Environment Variable {envIndex + 1}</h6>
+                          <button
+                            onClick={() => removeContainerEnvVar(containerIndex, envIndex)}
+                            className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors duration-200"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+
+                        {/* Variable Name */}
+                        <div className="mb-3">
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            Variable Name *
+                          </label>
+                          <input
+                            type="text"
+                            value={envVar.name}
+                            onChange={(e) => updateContainerEnvVar(containerIndex, envIndex, { name: e.target.value })}
+                            className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
+                            placeholder="DATABASE_URL"
+                          />
+                        </div>
+
+                        {/* Value Source Type */}
+                        <div className="mb-3">
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            Value Source
+                          </label>
+                          <select
+                            value={envVar.valueFrom ? envVar.valueFrom.type : 'direct'}
+                            onChange={(e) => setEnvVarType(containerIndex, envIndex, e.target.value as 'direct' | 'configMap' | 'secret')}
+                            className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
+                          >
+                            <option value="direct">Direct Value</option>
+                            <option value="configMap">From ConfigMap</option>
+                            <option value="secret">From Secret</option>
+                          </select>
+                        </div>
+
+                        {/* Value Input - Direct */}
+                        {!envVar.valueFrom && (
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              Value
+                            </label>
+                            <input
+                              type="text"
+                              value={envVar.value || ''}
+                              onChange={(e) => updateContainerEnvVar(containerIndex, envIndex, { value: e.target.value })}
+                              className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
+                              placeholder="Enter value directly"
+                            />
+                          </div>
+                        )}
+
+                        {/* Value Input - From ConfigMap */}
+                        {envVar.valueFrom?.type === 'configMap' && (
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">
+                                ConfigMap Name
+                              </label>
+                              <select
+                                value={envVar.valueFrom.name}
+                                onChange={(e) => updateContainerEnvVar(containerIndex, envIndex, {
+                                  valueFrom: { ...envVar.valueFrom, name: e.target.value, key: '' }
+                                })}
+                                className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-green-500 focus:border-transparent text-sm"
+                              >
+                                <option value="">Select ConfigMap</option>
+                                {filteredConfigMaps.map(cm => (
+                                  <option key={cm.name} value={cm.name}>{cm.name}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">
+                                Key
+                              </label>
+                              <select
+                                value={envVar.valueFrom.key}
+                                onChange={(e) => updateContainerEnvVar(containerIndex, envIndex, {
+                                  valueFrom: { ...envVar.valueFrom, key: e.target.value }
+                                })}
+                                className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-green-500 focus:border-transparent text-sm"
+                                disabled={!envVar.valueFrom.name}
+                              >
+                                <option value="">Select Key</option>
+                                {getAvailableKeys(envVar.valueFrom.name, 'configMap').map(key => (
+                                  <option key={key} value={key}>{key}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Value Input - From Secret */}
+                        {envVar.valueFrom?.type === 'secret' && (
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">
+                                Secret Name
+                              </label>
+                              <select
+                                value={envVar.valueFrom.name}
+                                onChange={(e) => updateContainerEnvVar(containerIndex, envIndex, {
+                                  valueFrom: { ...envVar.valueFrom, name: e.target.value, key: '' }
+                                })}
+                                className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-transparent text-sm"
+                              >
+                                <option value="">Select Secret</option>
+                                {filteredSecrets.map(secret => (
+                                  <option key={secret.name} value={secret.name}>{secret.name}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">
+                                Key
+                              </label>
+                              <select
+                                value={envVar.valueFrom.key}
+                                onChange={(e) => updateContainerEnvVar(containerIndex, envIndex, {
+                                  valueFrom: { ...envVar.valueFrom, key: e.target.value }
+                                })}
+                                className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-transparent text-sm"
+                                disabled={!envVar.valueFrom.name}
+                              >
+                                <option value="">Select Key</option>
+                                {getAvailableKeys(envVar.valueFrom.name, 'secret').map(key => (
+                                  <option key={key} value={key}>{key}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Preview of selected value */}
+                        {envVar.valueFrom && envVar.valueFrom.name && envVar.valueFrom.key && (
+                          <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
+                            <div className="flex items-center space-x-2">
+                              {envVar.valueFrom.type === 'configMap' ? (
+                                <FileText className="w-3 h-3 text-green-600" />
+                              ) : (
+                                <Key className="w-3 h-3 text-orange-600" />
+                              )}
+                              <span className="text-gray-600">
+                                Will use <span className="font-medium">{envVar.valueFrom.key}</span> from{' '}
+                                <span className="font-medium">{envVar.valueFrom.name}</span>
+                              </span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
