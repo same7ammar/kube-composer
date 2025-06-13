@@ -1,5 +1,5 @@
 import { Plus, Minus, Server, Settings, Database, Key, Trash2, Copy, Globe, Shield, FileText } from 'lucide-react';
-import type { DeploymentConfig, Container, ConfigMap, Secret, EnvVar } from '../types';
+import type { DeploymentConfig, Container, ConfigMap, Secret } from '../types';
 
 interface DeploymentFormProps {
   config: DeploymentConfig;
@@ -70,7 +70,7 @@ export function DeploymentForm({ config, onChange, availableNamespaces, availabl
     updateConfig({ containers: newContainers });
   };
 
-  const updateContainerEnvVar = (containerIndex: number, envIndex: number, updates: Partial<EnvVar>) => {
+  const updateContainerEnvVar = (containerIndex: number, envIndex: number, updates: Partial<typeof config.containers[0].env[0]>) => {
     const newContainers = [...config.containers];
     newContainers[containerIndex].env[envIndex] = {
       ...newContainers[containerIndex].env[envIndex],
@@ -239,16 +239,17 @@ export function DeploymentForm({ config, onChange, availableNamespaces, availabl
   };
 
   // Helper function to get default mount path
-  const getDefaultMountPath = (type: string, name: string) => {
-    switch (type) {
+  const getDefaultMountPath = (volumeName: string, volumeType: string) => {
+    if (!volumeName) return '';
+    
+    switch (volumeType) {
       case 'configMap':
-        return `/etc/config/${name}`;
+        return `/etc/config/${volumeName}`;
       case 'secret':
-        return `/etc/secrets/${name}`;
+        return `/etc/secrets/${volumeName}`;
       case 'emptyDir':
-        return `/tmp/${name}`;
       default:
-        return `/mnt/${name}`;
+        return `/tmp/${volumeName}`;
     }
   };
 
@@ -494,7 +495,7 @@ export function DeploymentForm({ config, onChange, availableNamespaces, availabl
                   <div className="space-y-3">
                     {container.env.map((envVar, envIndex) => (
                       <div key={envIndex} className="border border-gray-200 rounded-lg p-3 bg-white">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
                           <div>
                             <label className="block text-xs font-medium text-gray-600 mb-1">
                               Variable Name *
@@ -510,7 +511,7 @@ export function DeploymentForm({ config, onChange, availableNamespaces, availabl
                           
                           <div>
                             <label className="block text-xs font-medium text-gray-600 mb-1">
-                              Value Source
+                              Source Type
                             </label>
                             <select
                               value={envVar.valueFrom ? envVar.valueFrom.type : 'direct'}
@@ -527,106 +528,93 @@ export function DeploymentForm({ config, onChange, availableNamespaces, availabl
                                       type: e.target.value as 'configMap' | 'secret', 
                                       name: '', 
                                       key: '' 
-                                    } 
+                                    }
                                   });
                                 }
                               }}
                               className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
                             >
                               <option value="direct">Direct Value</option>
-                              <option value="configMap">From ConfigMap</option>
-                              <option value="secret">From Secret</option>
+                              <option value="configMap">ConfigMap</option>
+                              <option value="secret">Secret</option>
                             </select>
                           </div>
-                        </div>
 
-                        {!envVar.valueFrom ? (
-                          <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">
-                              Value
-                            </label>
-                            <input
-                              type="text"
-                              value={envVar.value || ''}
-                              onChange={(e) => updateContainerEnvVar(containerIndex, envIndex, { value: e.target.value })}
-                              className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
-                              placeholder="postgresql://localhost:5432/mydb"
-                            />
-                          </div>
-                        ) : (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">
-                                {envVar.valueFrom.type === 'configMap' ? 'ConfigMap' : 'Secret'} Name
-                              </label>
-                              <select
-                                value={envVar.valueFrom.name}
-                                onChange={(e) => updateContainerEnvVar(containerIndex, envIndex, {
-                                  valueFrom: { ...envVar.valueFrom, name: e.target.value }
-                                })}
-                                className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
-                              >
-                                <option value="">Select {envVar.valueFrom.type === 'configMap' ? 'ConfigMap' : 'Secret'}</option>
-                                {envVar.valueFrom.type === 'configMap' 
-                                  ? filteredConfigMaps.map(cm => (
-                                      <option key={cm.name} value={cm.name}>{cm.name}</option>
-                                    ))
-                                  : filteredSecrets.map(s => (
-                                      <option key={s.name} value={s.name}>{s.name}</option>
-                                    ))
-                                }
-                              </select>
-                            </div>
-                            
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">
-                                Key
-                              </label>
-                              {envVar.valueFrom.name ? (
+                          {envVar.valueFrom ? (
+                            <>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">
+                                  {envVar.valueFrom.type === 'configMap' ? 'ConfigMap' : 'Secret'} Name
+                                </label>
                                 <select
-                                  value={envVar.valueFrom.key}
+                                  value={envVar.valueFrom.name}
                                   onChange={(e) => updateContainerEnvVar(containerIndex, envIndex, {
-                                    valueFrom: { ...envVar.valueFrom, key: e.target.value }
+                                    valueFrom: { ...envVar.valueFrom!, name: e.target.value }
                                   })}
                                   className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
                                 >
-                                  <option value="">Select Key</option>
+                                  <option value="">Select {envVar.valueFrom.type === 'configMap' ? 'ConfigMap' : 'Secret'}</option>
                                   {envVar.valueFrom.type === 'configMap' 
-                                    ? (() => {
-                                        const cm = filteredConfigMaps.find(cm => cm.name === envVar.valueFrom?.name);
-                                        return cm ? Object.keys(cm.data).map(key => (
-                                          <option key={key} value={key}>{key}</option>
-                                        )) : [];
-                                      })()
-                                    : (() => {
-                                        const secret = filteredSecrets.find(s => s.name === envVar.valueFrom?.name);
-                                        return secret ? Object.keys(secret.data).map(key => (
-                                          <option key={key} value={key}>{key}</option>
-                                        )) : [];
-                                      })()
+                                    ? filteredConfigMaps.map(cm => (
+                                        <option key={cm.name} value={cm.name}>{cm.name}</option>
+                                      ))
+                                    : filteredSecrets.map(s => (
+                                        <option key={s.name} value={s.name}>{s.name}</option>
+                                      ))
                                   }
                                 </select>
-                              ) : (
-                                <input
-                                  type="text"
+                              </div>
+                              
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">
+                                  Key
+                                </label>
+                                <select
                                   value={envVar.valueFrom.key}
                                   onChange={(e) => updateContainerEnvVar(containerIndex, envIndex, {
-                                    valueFrom: { ...envVar.valueFrom, key: e.target.value }
+                                    valueFrom: { ...envVar.valueFrom!, key: e.target.value }
                                   })}
                                   className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
-                                  placeholder="database-url"
-                                />
-                              )}
+                                  disabled={!envVar.valueFrom.name}
+                                >
+                                  <option value="">Select Key</option>
+                                  {envVar.valueFrom.name && envVar.valueFrom.type === 'configMap' && 
+                                    filteredConfigMaps.find(cm => cm.name === envVar.valueFrom!.name)?.data &&
+                                    Object.keys(filteredConfigMaps.find(cm => cm.name === envVar.valueFrom!.name)!.data).map(key => (
+                                      <option key={key} value={key}>{key}</option>
+                                    ))
+                                  }
+                                  {envVar.valueFrom.name && envVar.valueFrom.type === 'secret' && 
+                                    filteredSecrets.find(s => s.name === envVar.valueFrom!.name)?.data &&
+                                    Object.keys(filteredSecrets.find(s => s.name === envVar.valueFrom!.name)!.data).map(key => (
+                                      <option key={key} value={key}>{key}</option>
+                                    ))
+                                  }
+                                </select>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="sm:col-span-2">
+                              <label className="block text-xs font-medium text-gray-600 mb-1">
+                                Value
+                              </label>
+                              <input
+                                type="text"
+                                value={envVar.value || ''}
+                                onChange={(e) => updateContainerEnvVar(containerIndex, envIndex, { value: e.target.value })}
+                                className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
+                                placeholder="environment value"
+                              />
                             </div>
-                          </div>
-                        )}
-
-                        <div className="flex justify-end mt-3">
+                          )}
+                        </div>
+                        
+                        <div className="flex justify-end">
                           <button
                             onClick={() => removeContainerEnvVar(containerIndex, envIndex)}
                             className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors duration-200"
                           >
-                            <Trash2 className="w-3 h-3" />
+                            <Minus className="w-3 h-3" />
                           </button>
                         </div>
                       </div>
@@ -652,13 +640,26 @@ export function DeploymentForm({ config, onChange, availableNamespaces, availabl
                   <div className="space-y-2">
                     {container.volumeMounts.map((mount, mountIndex) => (
                       <div key={mountIndex} className="flex items-center space-x-2">
-                        <input
-                          type="text"
+                        <select
                           value={mount.name}
-                          onChange={(e) => updateContainerVolumeMount(containerIndex, mountIndex, 'name', e.target.value)}
+                          onChange={(e) => {
+                            const selectedVolume = config.volumes.find(v => v.name === e.target.value);
+                            const defaultPath = selectedVolume ? getDefaultMountPath(selectedVolume.name, selectedVolume.type) : '';
+                            updateContainerVolumeMount(containerIndex, mountIndex, 'name', e.target.value);
+                            // Auto-fill mount path if it's empty
+                            if (!mount.mountPath && defaultPath) {
+                              updateContainerVolumeMount(containerIndex, mountIndex, 'mountPath', defaultPath);
+                            }
+                          }}
                           className="flex-1 px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent text-sm"
-                          placeholder="Volume name"
-                        />
+                        >
+                          <option value="">Select Volume</option>
+                          {config.volumes.map(volume => (
+                            <option key={volume.name} value={volume.name}>
+                              {volume.name} ({volume.type})
+                            </option>
+                          ))}
+                        </select>
                         <input
                           type="text"
                           value={mount.mountPath}
@@ -675,6 +676,20 @@ export function DeploymentForm({ config, onChange, availableNamespaces, availabl
                         </button>
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {/* Volume Mount Help */}
+                {config.volumes.length > 0 && (
+                  <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="text-xs text-blue-800">
+                      <p className="font-medium mb-1">Default Mount Paths</p>
+                      <ul className="text-xs space-y-1">
+                        <li>• <strong>ConfigMaps:</strong> /etc/config/&lt;name&gt;</li>
+                        <li>• <strong>Secrets:</strong> /etc/secrets/&lt;name&gt;</li>
+                        <li>• <strong>EmptyDir:</strong> /tmp/&lt;name&gt;</li>
+                      </ul>
+                    </div>
                   </div>
                 )}
               </div>
@@ -802,14 +817,8 @@ export function DeploymentForm({ config, onChange, availableNamespaces, availabl
                   type="text"
                   value={volume.mountPath}
                   onChange={(e) => updateVolume(index, 'mountPath', e.target.value)}
-                  onBlur={(e) => {
-                    // Set default mount path if empty
-                    if (!e.target.value && volume.name) {
-                      updateVolume(index, 'mountPath', getDefaultMountPath(volume.type, volume.name));
-                    }
-                  }}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
-                  placeholder={volume.name ? getDefaultMountPath(volume.type, volume.name) : "/path/to/mount"}
+                  placeholder="/path/to/mount"
                 />
                 <select
                   value={volume.type}
@@ -854,23 +863,6 @@ export function DeploymentForm({ config, onChange, availableNamespaces, availabl
             ))}
           </div>
         )}
-
-        {/* Default Mount Paths Info */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-          <div className="flex items-start space-x-2">
-            <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-              <span className="text-blue-600 text-xs font-bold">i</span>
-            </div>
-            <div className="text-sm text-blue-800">
-              <p className="font-medium mb-1">Default Mount Paths</p>
-              <ul className="text-xs space-y-1">
-                <li>• <strong>ConfigMaps:</strong> /etc/config/&lt;name&gt;</li>
-                <li>• <strong>Secrets:</strong> /etc/secrets/&lt;name&gt;</li>
-                <li>• <strong>EmptyDir:</strong> /tmp/&lt;name&gt;</li>
-              </ul>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Service Configuration */}
