@@ -254,27 +254,9 @@ We welcome contributions! Here's how:
 - Test YAML generation for various configurations
 - Validate Kubernetes resource compatibility
 
-## 📊 SEO & Social Media
-
-This project includes comprehensive SEO optimization:
-
-- **Meta tags** for search engines and social platforms
-- **Open Graph** tags for rich social sharing
-- **Twitter Cards** for enhanced Twitter sharing
-- **Structured data** (JSON-LD) for rich search snippets
-- **Sitemap** for search engine crawling
-- **Social sharing** buttons with GitHub stars
-
 ## 🔍 Keywords
 
 `kubernetes` `yaml generator` `deployment` `docker` `containers` `devops` `k8s` `kubernetes deployment` `yaml editor` `kubernetes tools` `free kubernetes tool` `visual editor` `deployment generator` `ingress` `configmap` `secrets` `namespaces` `multi-container` `microservices`
-
-## 📈 Usage Statistics
-
-- **1000+** YAML files generated daily
-- **500+** GitHub stars and growing
-- **50+** countries using the tool
-- **Zero** registration required
 
 ## 🌟 What's New
 
@@ -320,8 +302,8 @@ If this project helped you, please consider giving it a ⭐ on GitHub!
 - **🐛 Bug Reports:** [GitHub Issues](https://github.com/same7ammar/kube-composer/issues)
 - **💡 Feature Requests:** [GitHub Discussions](https://github.com/same7ammar/kube-composer/discussions)
 - **📧 Contact:** Open an issue for any questions
-- **🐦 Twitter:** [@kubecomposer](https://twitter.com/kubecomposer)
-- **💬 Discord:** [Join our community](https://discord.gg/kube-composer)
+- **🐦 Twitter:** [@Same7Ammar](https://x.com/Same7Ammar)
+- **💼 LinkedIn:** [Same Hammar](https://www.linkedin.com/in/samehammar/)
 
 ## 🎯 Roadmap
 
