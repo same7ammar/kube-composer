@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Database, Server, Globe, Info, ChevronDown, ChevronUp, Activity, Cpu, HardDrive, Network, Eye, EyeOff, ArrowRight, ArrowDown, Shield, Router as Route } from 'lucide-react';
+import { Database, Server, Globe, Info, ChevronDown, ChevronUp, Activity, Cpu, HardDrive, Network, Eye, EyeOff, ArrowRight, ArrowDown, Shield, Router as Route, Zap, Users, Lock, Cloud } from 'lucide-react';
 import type { DeploymentConfig } from '../types';
 
 interface ArchitecturePreviewProps {
@@ -11,6 +11,7 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
   const [selectedNamespace, setSelectedNamespace] = useState<string | null>(null);
   const [showDetails, setShowDetails] = useState(true);
   const [showTrafficFlow, setShowTrafficFlow] = useState(true);
+  const [animateTraffic, setAnimateTraffic] = useState(true);
 
   const validDeployments = deployments.filter(d => d.appName);
   const totalPods = validDeployments.reduce((sum, d) => sum + d.replicas, 0);
@@ -36,6 +37,10 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
 
   const toggleTrafficFlow = () => {
     setShowTrafficFlow(!showTrafficFlow);
+  };
+
+  const toggleAnimations = () => {
+    setAnimateTraffic(!animateTraffic);
   };
 
   const getServiceTypeColor = (type: string) => {
@@ -90,6 +95,13 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
               <Activity className="w-5 h-5 text-green-300" />
               <span className="text-sm text-blue-100">Live Preview</span>
             </div>
+            <button
+              onClick={toggleAnimations}
+              className="flex items-center space-x-2 px-3 py-2 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 hover:bg-white/20 transition-all duration-200"
+            >
+              <Zap className={`w-4 h-4 ${animateTraffic ? 'text-yellow-300' : 'text-gray-300'}`} />
+              <span className="text-sm">{animateTraffic ? 'Animations On' : 'Animations Off'}</span>
+            </button>
             <button
               onClick={toggleTrafficFlow}
               className="flex items-center space-x-2 px-3 py-2 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 hover:bg-white/20 transition-all duration-200"
@@ -224,7 +236,7 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                    <div className={`w-3 h-3 bg-green-500 rounded-full ${animateTraffic ? 'animate-pulse' : ''}`}></div>
                     <span className="text-sm text-green-600 font-medium">Active</span>
                   </div>
                 </div>
@@ -241,155 +253,333 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
                   
                   return (
                     <div key={index} className="space-y-4">
-                      {/* Traffic Flow Visualization */}
+                      {/* Enhanced Traffic Flow Visualization */}
                       {showTrafficFlow && (
-                        <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl p-6 border border-blue-200">
-                          <div className="flex items-center space-x-2 mb-4">
-                            <Route className="w-5 h-5 text-blue-600" />
-                            <h5 className="font-semibold text-gray-900">Traffic Flow: {deployment.appName}</h5>
-                          </div>
-                          
-                          <div className="flex flex-col lg:flex-row items-center space-y-4 lg:space-y-0 lg:space-x-6">
-                            {/* Ingress (if enabled) */}
-                            {hasIngress && (
-                              <>
-                                <div className="flex flex-col items-center space-y-2">
-                                  <div className="w-16 h-16 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center shadow-lg">
-                                    <Globe className="w-8 h-8 text-white" />
+                        <div className="bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200 relative overflow-hidden">
+                          {/* Animated Background Pattern */}
+                          {animateTraffic && (
+                            <div className="absolute inset-0 opacity-10">
+                              <div className="absolute top-0 left-0 w-full h-full">
+                                <div className="animate-pulse absolute top-4 left-4 w-2 h-2 bg-blue-500 rounded-full"></div>
+                                <div className="animate-pulse absolute top-8 right-8 w-2 h-2 bg-green-500 rounded-full" style={{ animationDelay: '0.5s' }}></div>
+                                <div className="animate-pulse absolute bottom-4 left-8 w-2 h-2 bg-purple-500 rounded-full" style={{ animationDelay: '1s' }}></div>
+                                <div className="animate-pulse absolute bottom-8 right-4 w-2 h-2 bg-orange-500 rounded-full" style={{ animationDelay: '1.5s' }}></div>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="relative z-10">
+                            <div className="flex items-center space-x-3 mb-6">
+                              <div className={`w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center ${animateTraffic ? 'animate-pulse' : ''}`}>
+                                <Route className="w-5 h-5 text-white" />
+                              </div>
+                              <div>
+                                <h5 className="font-semibold text-gray-900 text-lg">Traffic Flow: {deployment.appName}</h5>
+                                <p className="text-sm text-gray-600">Request routing and load balancing visualization</p>
+                              </div>
+                              {animateTraffic && (
+                                <div className="flex items-center space-x-1 ml-auto">
+                                  <div className="w-2 h-2 bg-green-500 rounded-full animate-ping"></div>
+                                  <span className="text-xs text-green-600 font-medium">Live Traffic</span>
+                                </div>
+                              )}
+                            </div>
+                            
+                            <div className="flex flex-col lg:flex-row items-center space-y-6 lg:space-y-0 lg:space-x-8">
+                              {/* External Users/Internet */}
+                              <div className="flex flex-col items-center space-y-3">
+                                <div className={`w-20 h-20 bg-gradient-to-r from-gray-600 to-gray-800 rounded-full flex items-center justify-center shadow-xl ${animateTraffic ? 'animate-bounce' : ''}`} style={{ animationDuration: '3s' }}>
+                                  <Users className="w-10 h-10 text-white" />
+                                </div>
+                                <div className="text-center">
+                                  <div className="font-bold text-gray-900">External Users</div>
+                                  <div className="text-xs text-gray-600">Internet Traffic</div>
+                                  <div className="flex items-center justify-center space-x-1 mt-1">
+                                    <Cloud className="w-3 h-3 text-blue-500" />
+                                    <span className="text-xs text-blue-600">Global</span>
                                   </div>
-                                  <div className="text-center">
-                                    <div className="font-medium text-gray-900">Ingress</div>
-                                    <div className="text-xs text-gray-600">{deployment.ingress.rules.length} rule{deployment.ingress.rules.length !== 1 ? 's' : ''}</div>
-                                    {deployment.ingress.tls.length > 0 && (
-                                      <div className="flex items-center justify-center space-x-1 mt-1">
-                                        <Shield className="w-3 h-3 text-green-500" />
-                                        <span className="text-xs text-green-600">TLS</span>
+                                </div>
+                              </div>
+
+                              {/* Animated Arrow */}
+                              <div className="flex flex-col lg:flex-row items-center relative">
+                                <div className="hidden lg:block relative">
+                                  <ArrowRight className="w-8 h-8 text-blue-500" />
+                                  {animateTraffic && (
+                                    <div className="absolute inset-0 flex items-center">
+                                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-ping"></div>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="lg:hidden relative">
+                                  <ArrowDown className="w-8 h-8 text-blue-500" />
+                                  {animateTraffic && (
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-ping"></div>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="absolute -bottom-6 lg:bottom-auto lg:-right-6 bg-blue-500 text-white px-2 py-1 rounded text-xs font-medium">
+                                  HTTPS Request
+                                </div>
+                              </div>
+
+                              {/* Ingress (if enabled) */}
+                              {hasIngress && (
+                                <>
+                                  <div className="flex flex-col items-center space-y-3">
+                                    <div className={`w-20 h-20 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl flex items-center justify-center shadow-xl transform ${animateTraffic ? 'hover:scale-110' : ''} transition-transform duration-300`}>
+                                      <Globe className="w-10 h-10 text-white" />
+                                    </div>
+                                    <div className="text-center">
+                                      <div className="font-bold text-gray-900">Ingress Controller</div>
+                                      <div className="text-xs text-gray-600">{deployment.ingress.rules.length} routing rule{deployment.ingress.rules.length !== 1 ? 's' : ''}</div>
+                                      {deployment.ingress.tls.length > 0 && (
+                                        <div className="flex items-center justify-center space-x-1 mt-1">
+                                          <Shield className="w-3 h-3 text-green-500" />
+                                          <Lock className="w-3 h-3 text-green-500" />
+                                          <span className="text-xs text-green-600 font-medium">TLS Encrypted</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="space-y-1">
+                                      {deployment.ingress.rules.slice(0, 2).map((rule, ruleIndex) => (
+                                        <div key={ruleIndex} className="text-xs text-gray-700 bg-white/80 backdrop-blur-sm px-3 py-1 rounded-full border border-orange-200">
+                                          {rule.host || '*'}{rule.path}
+                                        </div>
+                                      ))}
+                                      {deployment.ingress.rules.length > 2 && (
+                                        <div className="text-xs text-gray-500 text-center">
+                                          +{deployment.ingress.rules.length - 2} more rules
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Animated Arrow from Ingress to Service */}
+                                  <div className="flex flex-col lg:flex-row items-center relative">
+                                    <div className="hidden lg:block relative">
+                                      <ArrowRight className="w-8 h-8 text-green-500" />
+                                      {animateTraffic && (
+                                        <div className="absolute inset-0 flex items-center">
+                                          <div className="w-2 h-2 bg-green-500 rounded-full animate-ping" style={{ animationDelay: '0.5s' }}></div>
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="lg:hidden relative">
+                                      <ArrowDown className="w-8 h-8 text-green-500" />
+                                      {animateTraffic && (
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                          <div className="w-2 h-2 bg-green-500 rounded-full animate-ping" style={{ animationDelay: '0.5s' }}></div>
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="absolute -bottom-6 lg:bottom-auto lg:-right-6 bg-green-500 text-white px-2 py-1 rounded text-xs font-medium">
+                                      Route & Balance
+                                    </div>
+                                  </div>
+                                </>
+                              )}
+
+                              {/* External Traffic (if no ingress) */}
+                              {!hasIngress && deployment.serviceType !== 'ClusterIP' && (
+                                <>
+                                  <div className="flex flex-col items-center space-y-3">
+                                    <div className={`w-20 h-20 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-xl transform ${animateTraffic ? 'hover:scale-110' : ''} transition-transform duration-300`}>
+                                      <Network className="w-10 h-10 text-white" />
+                                    </div>
+                                    <div className="text-center">
+                                      <div className="font-bold text-gray-900">External Access</div>
+                                      <div className="text-xs text-gray-600">{deployment.serviceType} Service</div>
+                                      <div className="text-xs text-purple-600 font-medium">Port {deployment.port}</div>
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Arrow to Service */}
+                                  <div className="flex flex-col lg:flex-row items-center relative">
+                                    <div className="hidden lg:block relative">
+                                      <ArrowRight className="w-8 h-8 text-purple-500" />
+                                      {animateTraffic && (
+                                        <div className="absolute inset-0 flex items-center">
+                                          <div className="w-2 h-2 bg-purple-500 rounded-full animate-ping" style={{ animationDelay: '0.3s' }}></div>
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="lg:hidden relative">
+                                      <ArrowDown className="w-8 h-8 text-purple-500" />
+                                      {animateTraffic && (
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                          <div className="w-2 h-2 bg-purple-500 rounded-full animate-ping" style={{ animationDelay: '0.3s' }}></div>
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="absolute -bottom-6 lg:bottom-auto lg:-right-6 bg-purple-500 text-white px-2 py-1 rounded text-xs font-medium">
+                                      Direct Access
+                                    </div>
+                                  </div>
+                                </>
+                              )}
+
+                              {/* Service */}
+                              <div className="flex flex-col items-center space-y-3">
+                                <div className={`w-20 h-20 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center shadow-xl transform ${animateTraffic ? 'hover:scale-110' : ''} transition-transform duration-300`}>
+                                  <Network className="w-10 h-10 text-white" />
+                                </div>
+                                <div className="text-center">
+                                  <div className="font-bold text-gray-900">Kubernetes Service</div>
+                                  <div className="text-xs text-gray-600">{deployment.serviceType} Type</div>
+                                  <div className="text-xs text-green-600 font-medium">{deployment.port}→{deployment.targetPort}</div>
+                                  <div className="flex items-center justify-center space-x-1 mt-1">
+                                    <Activity className="w-3 h-3 text-blue-500" />
+                                    <span className="text-xs text-blue-600">Load Balancer</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Arrow from Service to Deployment */}
+                              <div className="flex flex-col lg:flex-row items-center relative">
+                                <div className="hidden lg:block relative">
+                                  <ArrowRight className="w-8 h-8 text-blue-500" />
+                                  {animateTraffic && (
+                                    <div className="absolute inset-0 flex items-center">
+                                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-ping" style={{ animationDelay: '0.7s' }}></div>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="lg:hidden relative">
+                                  <ArrowDown className="w-8 h-8 text-blue-500" />
+                                  {animateTraffic && (
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-ping" style={{ animationDelay: '0.7s' }}></div>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="absolute -bottom-6 lg:bottom-auto lg:-right-6 bg-blue-500 text-white px-2 py-1 rounded text-xs font-medium">
+                                  Distribute
+                                </div>
+                              </div>
+
+                              {/* Deployment */}
+                              <div className="flex flex-col items-center space-y-3">
+                                <div className={`w-20 h-20 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center shadow-xl transform ${animateTraffic ? 'hover:scale-110' : ''} transition-transform duration-300`}>
+                                  <Server className="w-10 h-10 text-white" />
+                                </div>
+                                <div className="text-center">
+                                  <div className="font-bold text-gray-900">Deployment</div>
+                                  <div className="text-xs text-gray-600">Replica Manager</div>
+                                  <div className="text-xs text-blue-600 font-medium">{deployment.replicas} replica{deployment.replicas !== 1 ? 's' : ''}</div>
+                                  <div className="flex items-center justify-center space-x-1 mt-1">
+                                    <Cpu className="w-3 h-3 text-purple-500" />
+                                    <span className="text-xs text-purple-600">Orchestrated</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Arrow from Deployment to Pods */}
+                              <div className="flex flex-col lg:flex-row items-center relative">
+                                <div className="hidden lg:block relative">
+                                  <ArrowRight className="w-8 h-8 text-purple-500" />
+                                  {animateTraffic && (
+                                    <div className="absolute inset-0 flex items-center">
+                                      <div className="w-2 h-2 bg-purple-500 rounded-full animate-ping" style={{ animationDelay: '1s' }}></div>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="lg:hidden relative">
+                                  <ArrowDown className="w-8 h-8 text-purple-500" />
+                                  {animateTraffic && (
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                      <div className="w-2 h-2 bg-purple-500 rounded-full animate-ping" style={{ animationDelay: '1s' }}></div>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="absolute -bottom-6 lg:bottom-auto lg:-right-6 bg-purple-500 text-white px-2 py-1 rounded text-xs font-medium">
+                                  Manages
+                                </div>
+                              </div>
+
+                              {/* Pods */}
+                              <div className="flex flex-col items-center space-y-3">
+                                <div className="relative">
+                                  <div className="grid grid-cols-2 gap-2">
+                                    {Array.from({ length: Math.min(deployment.replicas, 4) }).map((_, podIndex) => (
+                                      <div 
+                                        key={podIndex} 
+                                        className={`w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center shadow-lg transform ${animateTraffic ? 'hover:scale-110' : ''} transition-transform duration-300`}
+                                        style={{ animationDelay: `${podIndex * 0.2}s` }}
+                                      >
+                                        <Database className="w-4 h-4 text-white" />
+                                      </div>
+                                    ))}
+                                    {deployment.replicas > 4 && (
+                                      <div className="w-8 h-8 bg-gray-400 rounded-lg flex items-center justify-center text-xs text-white font-bold">
+                                        +{deployment.replicas - 4}
                                       </div>
                                     )}
                                   </div>
-                                  {deployment.ingress.rules.map((rule, ruleIndex) => (
-                                    <div key={ruleIndex} className="text-xs text-gray-500 bg-white px-2 py-1 rounded border">
-                                      {rule.host || '*'}{rule.path}
+                                  {animateTraffic && (
+                                    <div className="absolute -inset-2 border-2 border-purple-300 rounded-xl animate-pulse opacity-50"></div>
+                                  )}
+                                </div>
+                                <div className="text-center">
+                                  <div className="font-bold text-gray-900">Application Pods</div>
+                                  <div className="text-xs text-gray-600">{containerCount} container{containerCount !== 1 ? 's' : ''} each</div>
+                                  <div className="text-xs text-purple-600 font-medium">Running Workload</div>
+                                  <div className="flex items-center justify-center space-x-1 mt-1">
+                                    <HardDrive className="w-3 h-3 text-orange-500" />
+                                    <span className="text-xs text-orange-600">Active</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Enhanced Traffic Flow Legend */}
+                            <div className="mt-8 pt-6 border-t border-blue-200">
+                              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+                                <div className="flex items-center space-x-2 bg-white/60 backdrop-blur-sm rounded-lg p-3 border border-blue-200">
+                                  <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                                  <span className="text-gray-700 font-medium">Request Flow</span>
+                                </div>
+                                <div className="flex items-center space-x-2 bg-white/60 backdrop-blur-sm rounded-lg p-3 border border-green-200">
+                                  <Shield className="w-4 h-4 text-green-500" />
+                                  <span className="text-gray-700 font-medium">TLS Security</span>
+                                </div>
+                                <div className="flex items-center space-x-2 bg-white/60 backdrop-blur-sm rounded-lg p-3 border border-purple-200">
+                                  <Network className="w-4 h-4 text-purple-500" />
+                                  <span className="text-gray-700 font-medium">Load Balancing</span>
+                                </div>
+                                <div className="flex items-center space-x-2 bg-white/60 backdrop-blur-sm rounded-lg p-3 border border-orange-200">
+                                  <Activity className="w-4 h-4 text-orange-500" />
+                                  <span className="text-gray-700 font-medium">Health Monitoring</span>
+                                </div>
+                              </div>
+                              
+                              {/* Performance Metrics */}
+                              {animateTraffic && (
+                                <div className="mt-4 bg-white/80 backdrop-blur-sm rounded-lg p-4 border border-gray-200">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="text-sm font-medium text-gray-700">Live Traffic Simulation</span>
+                                    <div className="flex items-center space-x-2">
+                                      <div className="w-2 h-2 bg-green-500 rounded-full animate-ping"></div>
+                                      <span className="text-xs text-green-600">Active</span>
                                     </div>
-                                  ))}
-                                </div>
-                                
-                                {/* Arrow from Ingress to Service */}
-                                <div className="flex flex-col lg:flex-row items-center">
-                                  <ArrowRight className="w-6 h-6 text-blue-500 hidden lg:block" />
-                                  <ArrowDown className="w-6 h-6 text-blue-500 lg:hidden" />
-                                  <div className="text-xs text-blue-600 font-medium bg-blue-100 px-2 py-1 rounded mx-2">
-                                    HTTP{deployment.ingress.tls.length > 0 ? 'S' : ''}
+                                  </div>
+                                  <div className="grid grid-cols-3 gap-4 text-xs">
+                                    <div className="text-center">
+                                      <div className="text-lg font-bold text-blue-600">~{Math.floor(Math.random() * 100 + 50)}</div>
+                                      <div className="text-gray-600">Requests/sec</div>
+                                    </div>
+                                    <div className="text-center">
+                                      <div className="text-lg font-bold text-green-600">{Math.floor(Math.random() * 50 + 10)}ms</div>
+                                      <div className="text-gray-600">Avg Latency</div>
+                                    </div>
+                                    <div className="text-center">
+                                      <div className="text-lg font-bold text-purple-600">99.{Math.floor(Math.random() * 9 + 1)}%</div>
+                                      <div className="text-gray-600">Uptime</div>
+                                    </div>
                                   </div>
                                 </div>
-                              </>
-                            )}
-
-                            {/* External Traffic (if no ingress) */}
-                            {!hasIngress && deployment.serviceType !== 'ClusterIP' && (
-                              <>
-                                <div className="flex flex-col items-center space-y-2">
-                                  <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center shadow-lg">
-                                    <Globe className="w-8 h-8 text-white" />
-                                  </div>
-                                  <div className="text-center">
-                                    <div className="font-medium text-gray-900">External Traffic</div>
-                                    <div className="text-xs text-gray-600">{deployment.serviceType}</div>
-                                  </div>
-                                </div>
-                                
-                                {/* Arrow to Service */}
-                                <div className="flex flex-col lg:flex-row items-center">
-                                  <ArrowRight className="w-6 h-6 text-blue-500 hidden lg:block" />
-                                  <ArrowDown className="w-6 h-6 text-blue-500 lg:hidden" />
-                                  <div className="text-xs text-blue-600 font-medium bg-blue-100 px-2 py-1 rounded mx-2">
-                                    Port {deployment.port}
-                                  </div>
-                                </div>
-                              </>
-                            )}
-
-                            {/* Service */}
-                            <div className="flex flex-col items-center space-y-2">
-                              <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg flex items-center justify-center shadow-lg">
-                                <Network className="w-8 h-8 text-white" />
-                              </div>
-                              <div className="text-center">
-                                <div className="font-medium text-gray-900">Service</div>
-                                <div className="text-xs text-gray-600">{deployment.serviceType}</div>
-                                <div className="text-xs text-gray-500">{deployment.port}→{deployment.targetPort}</div>
-                              </div>
-                            </div>
-
-                            {/* Arrow from Service to Deployment */}
-                            <div className="flex flex-col lg:flex-row items-center">
-                              <ArrowRight className="w-6 h-6 text-blue-500 hidden lg:block" />
-                              <ArrowDown className="w-6 h-6 text-blue-500 lg:hidden" />
-                              <div className="text-xs text-blue-600 font-medium bg-blue-100 px-2 py-1 rounded mx-2">
-                                Load Balance
-                              </div>
-                            </div>
-
-                            {/* Deployment */}
-                            <div className="flex flex-col items-center space-y-2">
-                              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center shadow-lg">
-                                <Server className="w-8 h-8 text-white" />
-                              </div>
-                              <div className="text-center">
-                                <div className="font-medium text-gray-900">Deployment</div>
-                                <div className="text-xs text-gray-600">{deployment.replicas} replica{deployment.replicas !== 1 ? 's' : ''}</div>
-                              </div>
-                            </div>
-
-                            {/* Arrow from Deployment to Pods */}
-                            <div className="flex flex-col lg:flex-row items-center">
-                              <ArrowRight className="w-6 h-6 text-blue-500 hidden lg:block" />
-                              <ArrowDown className="w-6 h-6 text-blue-500 lg:hidden" />
-                              <div className="text-xs text-blue-600 font-medium bg-blue-100 px-2 py-1 rounded mx-2">
-                                Manages
-                              </div>
-                            </div>
-
-                            {/* Pods */}
-                            <div className="flex flex-col items-center space-y-2">
-                              <div className="grid grid-cols-2 gap-1">
-                                {Array.from({ length: Math.min(deployment.replicas, 4) }).map((_, podIndex) => (
-                                  <div key={podIndex} className="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 rounded flex items-center justify-center shadow-sm">
-                                    <Database className="w-3 h-3 text-white" />
-                                  </div>
-                                ))}
-                                {deployment.replicas > 4 && (
-                                  <div className="w-6 h-6 bg-gray-400 rounded flex items-center justify-center text-xs text-white font-bold">
-                                    +{deployment.replicas - 4}
-                                  </div>
-                                )}
-                              </div>
-                              <div className="text-center">
-                                <div className="font-medium text-gray-900">Pods</div>
-                                <div className="text-xs text-gray-600">{containerCount} container{containerCount !== 1 ? 's' : ''}</div>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Traffic Flow Legend */}
-                          <div className="mt-4 pt-4 border-t border-blue-200">
-                            <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-gray-600">
-                              <div className="flex items-center space-x-1">
-                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                <span>Request Flow</span>
-                              </div>
-                              <div className="flex items-center space-x-1">
-                                <Shield className="w-3 h-3 text-green-500" />
-                                <span>TLS Encryption</span>
-                              </div>
-                              <div className="flex items-center space-x-1">
-                                <Network className="w-3 h-3 text-blue-500" />
-                                <span>Load Balancing</span>
-                              </div>
-                              <div className="flex items-center space-x-1">
-                                <Database className="w-3 h-3 text-purple-500" />
-                                <span>Container Runtime</span>
-                              </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -407,7 +597,7 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
                               <div className={`w-3 h-3 rounded-full ${
                                 health.color === 'green' ? 'bg-green-500' :
                                 health.color === 'yellow' ? 'bg-yellow-500' : 'bg-red-500'
-                              } animate-pulse`} />
+                              } ${animateTraffic ? 'animate-pulse' : ''}`} />
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center space-x-2">
                                   <h5 className="font-semibold text-gray-900 truncate">{deployment.appName}</h5>
@@ -470,7 +660,7 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
                                   <div className="grid grid-cols-4 gap-2">
                                     {Array.from({ length: Math.min(deployment.replicas, 8) }).map((_, podIndex) => (
                                       <div key={podIndex} className="bg-white rounded-lg p-2 border border-green-200 text-center group hover:bg-green-50 transition-colors duration-200">
-                                        <div className="w-4 h-4 bg-green-500 rounded mx-auto mb-1 group-hover:scale-110 transition-transform duration-200" />
+                                        <div className={`w-4 h-4 bg-green-500 rounded mx-auto mb-1 group-hover:scale-110 transition-transform duration-200 ${animateTraffic ? 'animate-pulse' : ''}`} style={{ animationDelay: `${podIndex * 0.1}s` }} />
                                         <div className="text-xs text-green-700">Pod {podIndex + 1}</div>
                                         <div className="text-xs text-green-600">{containerCount}c</div>
                                       </div>
@@ -604,6 +794,7 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
                   ? 'The traffic flow visualization shows how requests travel from external sources through your Kubernetes infrastructure to reach your application containers.'
                   : 'Enable traffic flow visualization to see how requests travel through your Kubernetes infrastructure.'
                 }
+                {animateTraffic && ' Animations simulate real-time traffic patterns and system interactions.'}
               </p>
               <p>
                 Each deployment manages container replicas and is exposed through services for network access. 
