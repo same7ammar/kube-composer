@@ -39,6 +39,30 @@ export interface IngressConfig {
   rules: IngressRule[];
 }
 
+export interface HorizontalPodAutoscalerConfig {
+  enabled: boolean;
+  minReplicas: number;
+  maxReplicas: number;
+  targetCPUUtilizationPercentage?: number;
+  targetMemoryUtilizationPercentage?: number;
+  scaleUpPolicy?: {
+    stabilizationWindowSeconds?: number;
+    policies?: Array<{
+      type: 'Percent' | 'Pods';
+      value: number;
+      periodSeconds: number;
+    }>;
+  };
+  scaleDownPolicy?: {
+    stabilizationWindowSeconds?: number;
+    policies?: Array<{
+      type: 'Percent' | 'Pods';
+      value: number;
+      periodSeconds: number;
+    }>;
+  };
+}
+
 export interface ConfigMap {
   name: string;
   namespace: string;
@@ -74,6 +98,7 @@ export interface DeploymentConfig {
   selectedConfigMaps: string[]; // References to ConfigMap names
   selectedSecrets: string[]; // References to Secret names
   ingress: IngressConfig;
+  hpa: HorizontalPodAutoscalerConfig;
   // Legacy fields for backward compatibility
   image?: string;
   env?: Array<{ name: string; value: string }>;

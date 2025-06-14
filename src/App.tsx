@@ -75,6 +75,15 @@ function App() {
       annotations: {},
       tls: [],
       rules: []
+    },
+    hpa: {
+      enabled: false,
+      minReplicas: 1,
+      maxReplicas: 10,
+      targetCPUUtilizationPercentage: 80,
+      targetMemoryUtilizationPercentage: undefined,
+      scaleUpPolicy: undefined,
+      scaleDownPolicy: undefined
     }
   };
 
@@ -126,6 +135,15 @@ function App() {
         annotations: {},
         tls: [],
         rules: []
+      },
+      hpa: {
+        enabled: false,
+        minReplicas: 1,
+        maxReplicas: 10,
+        targetCPUUtilizationPercentage: 80,
+        targetMemoryUtilizationPercentage: undefined,
+        scaleUpPolicy: undefined,
+        scaleDownPolicy: undefined
       }
     };
     setDeployments([...deployments, newDeployment]);
@@ -166,6 +184,9 @@ function App() {
           ...rule,
           serviceName: `${deploymentToDuplicate.appName}-copy-service`
         }))
+      },
+      hpa: {
+        ...deploymentToDuplicate.hpa
       }
     };
     

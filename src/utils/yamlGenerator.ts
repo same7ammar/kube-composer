@@ -74,6 +74,58 @@ export function generateKubernetesYaml(config: DeploymentConfig): string {
 
   resources.push(service);
 
+  // Generate HorizontalPodAutoscaler if enabled
+  if (config.hpa.enabled) {
+    const hpa: KubernetesResource = {
+      apiVersion: 'autoscaling/v2',
+      kind: 'HorizontalPodAutoscaler',
+      metadata: {
+        name: `${config.appName}-hpa`,
+        namespace: config.namespace,
+        labels: {
+          app: config.appName,
+          ...config.labels
+        }
+      },
+      spec: {
+        scaleTargetRef: {
+          apiVersion: 'apps/v1',
+          kind: 'Deployment',
+          name: config.appName
+        },
+        minReplicas: config.hpa.minReplicas,
+        maxReplicas: config.hpa.maxReplicas,
+        metrics: generateHPAMetrics(config.hpa),
+        ...(config.hpa.scaleUpPolicy || config.hpa.scaleDownPolicy) && {
+          behavior: {
+            ...(config.hpa.scaleUpPolicy && {
+              scaleUp: {
+                ...(config.hpa.scaleUpPolicy.stabilizationWindowSeconds && {
+                  stabilizationWindowSeconds: config.hpa.scaleUpPolicy.stabilizationWindowSeconds
+                }),
+                ...(config.hpa.scaleUpPolicy.policies && {
+                  policies: config.hpa.scaleUpPolicy.policies
+                })
+              }
+            }),
+            ...(config.hpa.scaleDownPolicy && {
+              scaleDown: {
+                ...(config.hpa.scaleDownPolicy.stabilizationWindowSeconds && {
+                  stabilizationWindowSeconds: config.hpa.scaleDownPolicy.stabilizationWindowSeconds
+                }),
+                ...(config.hpa.scaleDownPolicy.policies && {
+                  policies: config.hpa.scaleDownPolicy.policies
+                })
+              }
+            })
+          }
+        })
+      }
+    };
+
+    resources.push(hpa);
+  }
+
   // Generate Ingress if enabled
   if (config.ingress.enabled && config.ingress.rules.length > 0) {
     const ingress: KubernetesResource = {
@@ -165,6 +217,52 @@ export function generateKubernetesYaml(config: DeploymentConfig): string {
     const yaml = objectToYaml(resource);
     return yaml;
   }).join('\n---\n');
+}
+
+function generateHPAMetrics(hpa: any): any[] {
+  const metrics = [];
+
+  if (hpa.targetCPUUtilizationPercentage) {
+    metrics.push({
+      type: 'Resource',
+      resource: {
+        name: 'cpu',
+        target: {
+          type: 'Utilization',
+          averageUtilization: hpa.targetCPUUtilizationPercentage
+        }
+      }
+    });
+  }
+
+  if (hpa.targetMemoryUtilizationPercentage) {
+    metrics.push({
+      type: 'Resource',
+      resource: {
+        name: 'memory',
+        target: {
+          type: 'Utilization',
+          averageUtilization: hpa.targetMemoryUtilizationPercentage
+        }
+      }
+    });
+  }
+
+  // If no metrics are specified, default to CPU
+  if (metrics.length === 0) {
+    metrics.push({
+      type: 'Resource',
+      resource: {
+        name: 'cpu',
+        target: {
+          type: 'Utilization',
+          averageUtilization: 80
+        }
+      }
+    });
+  }
+
+  return metrics;
 }
 
 function generateContainers(config: DeploymentConfig): any[] {
@@ -460,6 +558,7 @@ export function generateMultiDeploymentYaml(
 # - Resource validation
 # - Production-ready output
 # - ConfigMap and Secret management
+# - HorizontalPodAutoscaler support
 #
 # No registration required - start building now!
 
@@ -504,6 +603,10 @@ data:
       const ingressCount = deployments.filter(d => d.ingress?.enabled).length;
       if (ingressCount > 0) {
         allResources.push(`# Ingress Resources: ${ingressCount}`);
+      }
+      const hpaCount = deployments.filter(d => d.hpa?.enabled).length;
+      if (hpaCount > 0) {
+        allResources.push(`# HorizontalPodAutoscalers: ${hpaCount}`);
       }
     }
     allResources.push('');
@@ -630,6 +733,9 @@ data:
           allResources.push(`# Containers: ${containerCount}`);
           if (deployment.ingress?.enabled) {
             allResources.push(`# Ingress: Enabled`);
+          }
+          if (deployment.hpa?.enabled) {
+            allResources.push(`# HPA: Enabled (${deployment.hpa.minReplicas}-${deployment.hpa.maxReplicas} replicas)`);
           }
         }
         

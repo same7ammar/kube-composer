@@ -1,4 +1,4 @@
-import { Server, Globe, Database, CheckCircle, AlertCircle, Shield } from 'lucide-react';
+import { Server, Globe, Database, CheckCircle, AlertCircle, Shield, TrendingUp } from 'lucide-react';
 import type { DeploymentConfig } from '../types';
 
 interface ResourceSummaryProps {
@@ -10,6 +10,7 @@ export function ResourceSummary({ config }: ResourceSummaryProps) {
     let count = 0;
     if (config.appName) count += 2; // Deployment + Service
     if (config.ingress.enabled) count += 1; // Ingress
+    if (config.hpa.enabled) count += 1; // HorizontalPodAutoscaler
     count += config.configMaps.length;
     count += config.secrets.length;
     return count;
@@ -43,6 +44,21 @@ export function ResourceSummary({ config }: ResourceSummaryProps) {
           if (!rule.serviceName) issues.push(`Ingress rule ${index + 1}: Service name is required`);
           if (rule.servicePort <= 0) issues.push(`Ingress rule ${index + 1}: Service port must be greater than 0`);
         });
+      }
+    }
+
+    // Check HPA configuration
+    if (config.hpa.enabled) {
+      if (config.hpa.minReplicas <= 0) issues.push('HPA minimum replicas must be greater than 0');
+      if (config.hpa.maxReplicas <= config.hpa.minReplicas) issues.push('HPA maximum replicas must be greater than minimum replicas');
+      if (!config.hpa.targetCPUUtilizationPercentage && !config.hpa.targetMemoryUtilizationPercentage) {
+        issues.push('HPA requires at least one target metric (CPU or Memory)');
+      }
+      if (config.hpa.targetCPUUtilizationPercentage && (config.hpa.targetCPUUtilizationPercentage <= 0 || config.hpa.targetCPUUtilizationPercentage > 100)) {
+        issues.push('HPA CPU target must be between 1-100%');
+      }
+      if (config.hpa.targetMemoryUtilizationPercentage && (config.hpa.targetMemoryUtilizationPercentage <= 0 || config.hpa.targetMemoryUtilizationPercentage > 100)) {
+        issues.push('HPA Memory target must be between 1-100%');
       }
     }
     
@@ -114,6 +130,32 @@ export function ResourceSummary({ config }: ResourceSummaryProps) {
           </div>
         </div>
       </div>
+
+      {/* HPA Summary */}
+      {config.hpa.enabled && (
+        <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+          <div className="flex items-center space-x-2 mb-2">
+            <TrendingUp className="w-5 h-5 text-purple-600" />
+            <span className="font-medium text-purple-900">Horizontal Pod Autoscaler</span>
+          </div>
+          <div className="text-sm text-purple-700 space-y-1">
+            <div>Min Replicas: {config.hpa.minReplicas}</div>
+            <div>Max Replicas: {config.hpa.maxReplicas}</div>
+            {config.hpa.targetCPUUtilizationPercentage && (
+              <div>CPU Target: {config.hpa.targetCPUUtilizationPercentage}%</div>
+            )}
+            {config.hpa.targetMemoryUtilizationPercentage && (
+              <div>Memory Target: {config.hpa.targetMemoryUtilizationPercentage}%</div>
+            )}
+            <div className="mt-2">
+              <div className="font-medium mb-1">Scaling Behavior:</div>
+              <div className="text-xs text-purple-600">
+                Automatically scales pods based on resource utilization
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Ingress Summary */}
       {config.ingress.enabled && (
@@ -236,6 +278,11 @@ export function ResourceSummary({ config }: ResourceSummaryProps) {
         </div>
         <div className="text-sm text-indigo-700 mt-1">
           Resources that will be created in your cluster
+          {config.hpa.enabled && (
+            <div className="text-xs text-indigo-600 mt-1">
+              • Includes HorizontalPodAutoscaler for automatic scaling
+            </div>
+          )}
         </div>
       </div>
     </div>
