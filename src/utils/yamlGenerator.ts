@@ -119,7 +119,7 @@ export function generateKubernetesYaml(config: DeploymentConfig): string {
               }
             })
           }
-        })
+        }
       }
     };
 
