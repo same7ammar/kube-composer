@@ -15,7 +15,7 @@ export function generateKubernetesYaml(config: DeploymentConfig): string {
       name: config.appName,
       namespace: config.namespace,
       labels: {
-        app: config.appName,
+        'app.kubernetes.io/name': config.appName,
         ...config.labels
       },
       ...(Object.keys(config.annotations).length > 0 && { annotations: config.annotations })
@@ -24,13 +24,13 @@ export function generateKubernetesYaml(config: DeploymentConfig): string {
       replicas: config.replicas,
       selector: {
         matchLabels: {
-          app: config.appName
+          'app.kubernetes.io/name': config.appName
         }
       },
       template: {
         metadata: {
           labels: {
-            app: config.appName,
+            'app.kubernetes.io/name': config.appName,
             ...config.labels
           }
         },
@@ -59,13 +59,13 @@ export function generateKubernetesYaml(config: DeploymentConfig): string {
       name: `${config.appName}-service`,
       namespace: config.namespace,
       labels: {
-        app: config.appName,
+        'app.kubernetes.io/name': config.appName,
         ...config.labels
       }
     },
     spec: {
       selector: {
-        app: config.appName
+        'app.kubernetes.io/name': config.appName
       },
       ports: generateServicePorts(config),
       type: config.serviceType
@@ -83,7 +83,7 @@ export function generateKubernetesYaml(config: DeploymentConfig): string {
         name: `${config.appName}-ingress`,
         namespace: config.namespace,
         labels: {
-          app: config.appName,
+          'app.kubernetes.io/name': config.appName,
           ...config.labels
         },
         ...(Object.keys(config.ingress.annotations).length > 0 && {
@@ -130,7 +130,7 @@ export function generateKubernetesYaml(config: DeploymentConfig): string {
         name: cm.name,
         namespace: config.namespace,
         labels: {
-          app: config.appName,
+          'app.kubernetes.io/name': config.appName,
           ...config.labels
         }
       },
@@ -148,7 +148,7 @@ export function generateKubernetesYaml(config: DeploymentConfig): string {
         name: secret.name,
         namespace: config.namespace,
         labels: {
-          app: config.appName,
+          'app.kubernetes.io/name': config.appName,
           ...config.labels
         }
       },
