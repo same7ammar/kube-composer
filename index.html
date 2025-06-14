@@ -58,6 +58,20 @@
     <!-- Web App Manifest -->
     <link rel="manifest" href="/site.webmanifest" />
     
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-QVDZXW1EYD"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      
+      gtag('config', 'G-QVDZXW1EYD', {
+        page_title: 'Kube Composer - Kubernetes YAML Generator',
+        page_location: 'https://kube-composer.com',
+        send_page_view: true
+      });
+    </script>
+    
     <!-- Structured Data (JSON-LD) -->
     <script type="application/ld+json">
     {
@@ -126,6 +140,7 @@
     <!-- Preconnect to external domains for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://www.googletagmanager.com" />
     
     <!-- DNS Prefetch for social media domains -->
     <link rel="dns-prefetch" href="//twitter.com" />
@@ -143,7 +158,7 @@
     <meta name="ICBM" content="39.7392, -104.9903" />
     
     <!-- Content Security Policy -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://api.github.com;" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://api.github.com https://www.google-analytics.com;" />
   </head>
   <body>
     <div id="root"></div>
