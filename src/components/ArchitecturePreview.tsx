@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Database, Server, Globe, Info, ChevronDown, ChevronUp, Activity, HardDrive, Network, Eye, EyeOff, Users, Shield, Lock, ArrowRight, ArrowDown, Play, Pause } from 'lucide-react';
+import { Database, Server, Globe, Info, ChevronDown, ChevronUp, Activity, HardDrive, Network, Eye, EyeOff, Users, Shield, Lock, ArrowRight, ArrowDown, Play, Pause, TrendingUp } from 'lucide-react';
 import type { DeploymentConfig } from '../types';
 
 interface ArchitecturePreviewProps {
@@ -16,6 +16,7 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
   const totalPods = validDeployments.reduce((sum, d) => sum + d.replicas, 0);
   const totalServices = validDeployments.length;
   const totalContainers = validDeployments.reduce((sum, d) => sum + (d.containers?.length || 1), 0);
+  const totalHPAs = validDeployments.filter(d => d.hpa?.enabled).length;
 
   const namespaces = [...new Set(validDeployments.map(d => d.namespace))];
 
@@ -125,7 +126,7 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
         </div>
 
         {/* Enhanced Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
           <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
             <div className="flex items-center space-x-2 mb-2">
               <Server className="w-5 h-5 text-blue-200" />
@@ -153,6 +154,13 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
               <span className="text-sm text-blue-100">Services</span>
             </div>
             <div className="text-2xl font-bold">{totalServices}</div>
+          </div>
+          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+            <div className="flex items-center space-x-2 mb-2">
+              <TrendingUp className="w-5 h-5 text-purple-200" />
+              <span className="text-sm text-blue-100">HPAs</span>
+            </div>
+            <div className="text-2xl font-bold">{totalHPAs}</div>
           </div>
           <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
             <div className="flex items-center space-x-2 mb-2">
@@ -205,6 +213,7 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
           const namespaceDeployments = validDeployments.filter(d => d.namespace === namespace);
           const namespacePods = namespaceDeployments.reduce((sum, d) => sum + d.replicas, 0);
           const namespaceContainers = namespaceDeployments.reduce((sum, d) => sum + (d.containers?.length || 1), 0);
+          const namespaceHPAs = namespaceDeployments.filter(d => d.hpa?.enabled).length;
           
           return (
             <div key={namespace} className="bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden">
@@ -219,6 +228,7 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
                       <h4 className="font-bold text-gray-900 text-lg">Namespace: {namespace}</h4>
                       <p className="text-sm text-gray-600">
                         {namespaceDeployments.length} deployment{namespaceDeployments.length !== 1 ? 's' : ''} • {namespaceContainers} container{namespaceContainers !== 1 ? 's' : ''} • {namespacePods} pod{namespacePods !== 1 ? 's' : ''}
+                        {namespaceHPAs > 0 && ` • ${namespaceHPAs} HPA${namespaceHPAs !== 1 ? 's' : ''}`}
                       </p>
                     </div>
                   </div>
@@ -237,6 +247,7 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
                   const health = getHealthStatus(deployment);
                   const containerCount = deployment.containers?.length || 1;
                   const hasIngress = deployment.ingress?.enabled;
+                  const hasHPA = deployment.hpa?.enabled;
                   
                   return (
                     <div key={index} className="space-y-6">
@@ -247,9 +258,17 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
                             <Network className="w-5 h-5 text-blue-600" />
                             <span>Traffic Flow: {deployment.appName}</span>
                           </h5>
-                          <div className="flex items-center space-x-2 text-sm text-gray-600">
-                            <div className={`w-2 h-2 bg-green-500 rounded-full ${animationsEnabled ? 'animate-pulse' : ''}`}></div>
-                            <span>Live Traffic</span>
+                          <div className="flex items-center space-x-4">
+                            {hasHPA && (
+                              <div className="flex items-center space-x-2 text-sm text-purple-600">
+                                <TrendingUp className="w-4 h-4" />
+                                <span>Auto-scaling</span>
+                              </div>
+                            )}
+                            <div className="flex items-center space-x-2 text-sm text-gray-600">
+                              <div className={`w-2 h-2 bg-green-500 rounded-full ${animationsEnabled ? 'animate-pulse' : ''}`}></div>
+                              <span>Live Traffic</span>
+                            </div>
                           </div>
                         </div>
 
@@ -349,6 +368,33 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
                                 </div>
                               </div>
                             </div>
+
+                            {/* HPA Layer (if enabled) */}
+                            {hasHPA && (
+                              <>
+                                {/* Arrow Right */}
+                                <div className={`flex flex-col items-center space-y-1 ${animationsEnabled ? 'animate-pulse' : ''}`}>
+                                  <ArrowRight className="w-8 h-8 text-purple-500" />
+                                  <div className="text-xs text-purple-600 font-medium">Scale</div>
+                                </div>
+
+                                <div className="flex flex-col items-center space-y-3 flex-shrink-0">
+                                  <div className={`w-20 h-20 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center shadow-lg ${animationsEnabled ? 'animate-pulse' : ''}`}>
+                                    <TrendingUp className="w-8 h-8 text-white" />
+                                  </div>
+                                  <div className="text-center">
+                                    <div className="text-sm font-bold text-gray-900">HPA</div>
+                                    <div className="text-xs text-gray-600">
+                                      {deployment.hpa.minReplicas}-{deployment.hpa.maxReplicas} replicas
+                                    </div>
+                                    <div className="text-xs text-purple-600 font-medium">
+                                      {deployment.hpa.targetCPUUtilizationPercentage && `CPU: ${deployment.hpa.targetCPUUtilizationPercentage}%`}
+                                      {deployment.hpa.targetMemoryUtilizationPercentage && ` Mem: ${deployment.hpa.targetMemoryUtilizationPercentage}%`}
+                                    </div>
+                                  </div>
+                                </div>
+                              </>
+                            )}
                           </div>
 
                           {/* Arrow Down to Pods */}
@@ -369,6 +415,13 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
                               <div className="flex items-center space-x-2 text-sm text-gray-600">
                                 <div className={`w-2 h-2 bg-purple-500 rounded-full ${animationsEnabled ? 'animate-pulse' : ''}`}></div>
                                 <span>Active</span>
+                                {hasHPA && (
+                                  <>
+                                    <span>•</span>
+                                    <TrendingUp className="w-4 h-4 text-purple-500" />
+                                    <span className="text-purple-600">Auto-scaling</span>
+                                  </>
+                                )}
                               </div>
                             </div>
                             
@@ -472,6 +525,11 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
                                       Ingress
                                     </span>
                                   )}
+                                  {hasHPA && (
+                                    <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
+                                      HPA
+                                    </span>
+                                  )}
                                 </div>
                                 <p className="text-sm text-gray-500 truncate">
                                   {deployment.containers?.[0]?.image || 'No image specified'}
@@ -482,6 +540,9 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
                               <div className="text-right">
                                 <div className="text-sm font-medium text-gray-900">{deployment.replicas} replica{deployment.replicas !== 1 ? 's' : ''}</div>
                                 <div className="text-xs text-gray-500">Port {deployment.port}→{deployment.targetPort}</div>
+                                {hasHPA && (
+                                  <div className="text-xs text-purple-600">Auto-scale: {deployment.hpa.minReplicas}-{deployment.hpa.maxReplicas}</div>
+                                )}
                               </div>
                               {showDetails && (
                                 isExpanded ? (
@@ -531,6 +592,26 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
                                     )}
                                   </div>
                                 </div>
+
+                                {/* HPA Details */}
+                                {hasHPA && (
+                                  <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+                                    <div className="flex items-center space-x-2 mb-3">
+                                      <TrendingUp className="w-4 h-4 text-purple-600" />
+                                      <span className="text-sm font-medium text-purple-900">Auto-scaling</span>
+                                    </div>
+                                    <div className="space-y-2 text-xs text-purple-700">
+                                      <div>Min Replicas: {deployment.hpa.minReplicas}</div>
+                                      <div>Max Replicas: {deployment.hpa.maxReplicas}</div>
+                                      {deployment.hpa.targetCPUUtilizationPercentage && (
+                                        <div>CPU Target: {deployment.hpa.targetCPUUtilizationPercentage}%</div>
+                                      )}
+                                      {deployment.hpa.targetMemoryUtilizationPercentage && (
+                                        <div>Memory Target: {deployment.hpa.targetMemoryUtilizationPercentage}%</div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
 
                                 {/* Container Details */}
                                 {deployment.containers && deployment.containers.length > 0 && (
@@ -645,13 +726,17 @@ export function ArchitecturePreview({ deployments }: ArchitecturePreviewProps) {
             <h4 className="font-semibold text-indigo-900 mb-2">Architecture Insights</h4>
             <div className="text-sm text-indigo-700 space-y-2">
               <p>
-                Your Kubernetes architecture consists of <strong>{validDeployments.length}</strong> deployment{validDeployments.length !== 1 ? 's' : ''} 
+                Your Kubernetes architecture consists of <strong>{validDeployments.length}</strong>  deployment{validDeployments.length !== 1 ? 's' : ''} 
                 with <strong>{totalContainers}</strong> container{totalContainers !== 1 ? 's' : ''} running <strong>{totalPods}</strong> pod{totalPods !== 1 ? 's' : ''} across <strong>{namespaces.length}</strong> namespace{namespaces.length !== 1 ? 's' : ''}.
+                {totalHPAs > 0 && (
+                  <> <strong>{totalHPAs}</strong> HorizontalPodAutoscaler{totalHPAs !== 1 ? 's' : ''} provide{totalHPAs === 1 ? 's' : ''} automatic scaling capabilities.</>
+                )}
               </p>
               <p>
                 The horizontal traffic flow shows how external requests are routed through your infrastructure:
                 {validDeployments.some(d => d.ingress?.enabled) && ' Ingress controllers handle external routing and TLS termination,'} 
                 Services provide load balancing and service discovery, and Deployments manage your application replicas in dedicated pod instances.
+                {totalHPAs > 0 && ' HorizontalPodAutoscalers automatically adjust the number of pod replicas based on resource utilization.'}
               </p>
               <p>
                 {showDetails ? 'Click on deployments above to explore detailed configurations and resource allocations.' : 'Enable details view to explore configurations and resource allocations.'}
