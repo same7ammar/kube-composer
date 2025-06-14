@@ -142,6 +142,9 @@ export function SocialShare({ className = '' }: SocialShareProps) {
     linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareData.url)}&title=${encodeURIComponent(shareData.title)}&summary=${encodeURIComponent('Generate production-ready Kubernetes YAML files in minutes with our intuitive visual editor. Perfect for developers and DevOps teams.')}`
   };
 
+  // Check if native share is available
+  const isNativeShareAvailable = typeof navigator !== 'undefined' && 'share' in navigator && typeof navigator.share === 'function';
+
   return (
     <div className={`flex items-center space-x-1 ${className}`}>
       <span className="text-xs font-medium text-gray-600 hidden sm:inline">Share:</span>
@@ -182,7 +185,7 @@ export function SocialShare({ className = '' }: SocialShareProps) {
       </a>
       
       {/* Native Share (mobile) */}
-      {typeof navigator !== 'undefined' && navigator.share && (
+      {isNativeShareAvailable && (
         <button
           onClick={handleNativeShare}
           className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200"
