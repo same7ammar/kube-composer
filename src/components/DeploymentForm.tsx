@@ -1,6 +1,18 @@
-import React, { useState } from 'react';
-import { Plus, X, Trash2, Copy, Server, Globe, Database, Settings, Key, HardDrive, Network, Shield, TrendingUp, AlertTriangle, Info } from 'lucide-react';
-import type { DeploymentConfig, Container, EnvVar, IngressRule, ConfigMap, Secret } from '../types';
+import { useState } from 'react';
+import { 
+  Plus, 
+  X, 
+  Server, 
+  Globe, 
+  Database, 
+  Settings, 
+  HardDrive, 
+  AlertTriangle, 
+  Info, 
+  TrendingUp,
+  Activity
+} from 'lucide-react';
+import type { DeploymentConfig, Container, EnvVar, ConfigMap, Secret } from '../types';
 
 interface DeploymentFormProps {
   config: DeploymentConfig;
@@ -13,20 +25,42 @@ interface DeploymentFormProps {
 export function DeploymentForm({ 
   config, 
   onChange, 
-  availableNamespaces,
-  availableConfigMaps,
+  availableNamespaces, 
+  availableConfigMaps, 
   availableSecrets 
 }: DeploymentFormProps) {
-  const [activeTab, setActiveTab] = useState<'basic' | 'containers' | 'networking' | 'scaling' | 'storage' | 'advanced'>('basic');
+  const [activeTab, setActiveTab] = useState<'basic' | 'containers' | 'networking' | 'storage' | 'scaling'>('basic');
+  const [newLabel, setNewLabel] = useState({ key: '', value: '' });
+  const [newAnnotation, setNewAnnotation] = useState({ key: '', value: '' });
+  const [newVolume, setNewVolume] = useState({ 
+    name: '', 
+    mountPath: '', 
+    type: 'emptyDir' as const,
+    configMapName: '',
+    secretName: ''
+  });
+  const [newIngressRule, setNewIngressRule] = useState({
+    host: '',
+    path: '/',
+    pathType: 'Prefix' as const,
+    serviceName: config.appName ? `${config.appName}-service` : '',
+    servicePort: config.port || 80
+  });
+  const [newTLS, setNewTLS] = useState({
+    secretName: '',
+    hosts: ['']
+  });
+
+  const tabs = [
+    { id: 'basic' as const, label: 'Basic', icon: Server },
+    { id: 'containers' as const, label: 'Containers', icon: Database },
+    { id: 'networking' as const, label: 'Networking', icon: Globe },
+    { id: 'storage' as const, label: 'Storage', icon: HardDrive },
+    { id: 'scaling' as const, label: 'Scaling', icon: TrendingUp }
+  ];
 
   const updateConfig = (updates: Partial<DeploymentConfig>) => {
     onChange({ ...config, ...updates });
-  };
-
-  const updateContainer = (index: number, updates: Partial<Container>) => {
-    const newContainers = [...config.containers];
-    newContainers[index] = { ...newContainers[index], ...updates };
-    updateConfig({ containers: newContainers });
   };
 
   const addContainer = () => {
@@ -41,168 +75,71 @@ export function DeploymentForm({
       },
       volumeMounts: []
     };
-    updateConfig({ containers: [...config.containers, newContainer] });
+    
+    const containers = config.containers || [];
+    updateConfig({ containers: [...containers, newContainer] });
+  };
+
+  const updateContainer = (index: number, updates: Partial<Container>) => {
+    const containers = [...(config.containers || [])];
+    containers[index] = { ...containers[index], ...updates };
+    updateConfig({ containers });
   };
 
   const removeContainer = (index: number) => {
-    if (config.containers.length > 1) {
-      const newContainers = config.containers.filter((_, i) => i !== index);
-      updateConfig({ containers: newContainers });
-    }
-  };
-
-  const duplicateContainer = (index: number) => {
-    const containerToDuplicate = config.containers[index];
-    const duplicatedContainer: Container = {
-      ...containerToDuplicate,
-      name: containerToDuplicate.name ? `${containerToDuplicate.name}-copy` : ''
-    };
-    const newContainers = [...config.containers];
-    newContainers.splice(index + 1, 0, duplicatedContainer);
-    updateConfig({ containers: newContainers });
+    const containers = config.containers?.filter((_, i) => i !== index) || [];
+    updateConfig({ containers });
   };
 
   const addEnvVar = (containerIndex: number) => {
+    const containers = [...(config.containers || [])];
     const newEnvVar: EnvVar = { name: '', value: '' };
-    const newContainers = [...config.containers];
-    newContainers[containerIndex].env.push(newEnvVar);
-    updateConfig({ containers: newContainers });
+    containers[containerIndex].env.push(newEnvVar);
+    updateConfig({ containers });
   };
 
   const updateEnvVar = (containerIndex: number, envIndex: number, updates: Partial<EnvVar>) => {
-    const newContainers = [...config.containers];
-    newContainers[containerIndex].env[envIndex] = { 
-      ...newContainers[containerIndex].env[envIndex], 
+    const containers = [...(config.containers || [])];
+    containers[containerIndex].env[envIndex] = { 
+      ...containers[containerIndex].env[envIndex], 
       ...updates 
     };
-    updateConfig({ containers: newContainers });
+    updateConfig({ containers });
   };
 
   const removeEnvVar = (containerIndex: number, envIndex: number) => {
-    const newContainers = [...config.containers];
-    newContainers[containerIndex].env.splice(envIndex, 1);
-    updateConfig({ containers: newContainers });
+    const containers = [...(config.containers || [])];
+    containers[containerIndex].env = containers[containerIndex].env.filter((_, i) => i !== envIndex);
+    updateConfig({ containers });
   };
 
   const addVolumeMount = (containerIndex: number) => {
-    const newVolumeMount = { name: '', mountPath: '' };
-    const newContainers = [...config.containers];
-    newContainers[containerIndex].volumeMounts.push(newVolumeMount);
-    updateConfig({ containers: newContainers });
+    const containers = [...(config.containers || [])];
+    containers[containerIndex].volumeMounts.push({ name: '', mountPath: '' });
+    updateConfig({ containers });
   };
 
   const updateVolumeMount = (containerIndex: number, mountIndex: number, updates: { name?: string; mountPath?: string }) => {
-    const newContainers = [...config.containers];
-    newContainers[containerIndex].volumeMounts[mountIndex] = {
-      ...newContainers[containerIndex].volumeMounts[mountIndex],
+    const containers = [...(config.containers || [])];
+    containers[containerIndex].volumeMounts[mountIndex] = {
+      ...containers[containerIndex].volumeMounts[mountIndex],
       ...updates
     };
-    updateConfig({ containers: newContainers });
+    updateConfig({ containers });
   };
 
   const removeVolumeMount = (containerIndex: number, mountIndex: number) => {
-    const newContainers = [...config.containers];
-    newContainers[containerIndex].volumeMounts.splice(mountIndex, 1);
-    updateConfig({ containers: newContainers });
-  };
-
-  const addVolume = () => {
-    const newVolume = { 
-      name: '', 
-      mountPath: '', 
-      type: 'emptyDir' as const,
-      configMapName: '',
-      secretName: ''
-    };
-    updateConfig({ volumes: [...config.volumes, newVolume] });
-  };
-
-  const updateVolume = (index: number, updates: any) => {
-    const newVolumes = [...config.volumes];
-    newVolumes[index] = { ...newVolumes[index], ...updates };
-    updateConfig({ volumes: newVolumes });
-  };
-
-  const removeVolume = (index: number) => {
-    const newVolumes = config.volumes.filter((_, i) => i !== index);
-    updateConfig({ volumes: newVolumes });
-  };
-
-  const addIngressRule = () => {
-    const newRule: IngressRule = {
-      host: '',
-      path: '/',
-      pathType: 'Prefix',
-      serviceName: `${config.appName}-service`,
-      servicePort: config.port
-    };
-    updateConfig({
-      ingress: {
-        ...config.ingress,
-        rules: [...config.ingress.rules, newRule]
-      }
-    });
-  };
-
-  const updateIngressRule = (index: number, updates: Partial<IngressRule>) => {
-    const newRules = [...config.ingress.rules];
-    newRules[index] = { ...newRules[index], ...updates };
-    updateConfig({
-      ingress: {
-        ...config.ingress,
-        rules: newRules
-      }
-    });
-  };
-
-  const removeIngressRule = (index: number) => {
-    const newRules = config.ingress.rules.filter((_, i) => i !== index);
-    updateConfig({
-      ingress: {
-        ...config.ingress,
-        rules: newRules
-      }
-    });
-  };
-
-  const addTLSConfig = () => {
-    const newTLS = { secretName: '', hosts: [''] };
-    updateConfig({
-      ingress: {
-        ...config.ingress,
-        tls: [...config.ingress.tls, newTLS]
-      }
-    });
-  };
-
-  const updateTLSConfig = (index: number, updates: any) => {
-    const newTLS = [...config.ingress.tls];
-    newTLS[index] = { ...newTLS[index], ...updates };
-    updateConfig({
-      ingress: {
-        ...config.ingress,
-        tls: newTLS
-      }
-    });
-  };
-
-  const removeTLSConfig = (index: number) => {
-    const newTLS = config.ingress.tls.filter((_, i) => i !== index);
-    updateConfig({
-      ingress: {
-        ...config.ingress,
-        tls: newTLS
-      }
-    });
+    const containers = [...(config.containers || [])];
+    containers[containerIndex].volumeMounts = containers[containerIndex].volumeMounts.filter((_, i) => i !== mountIndex);
+    updateConfig({ containers });
   };
 
   const addLabel = () => {
-    const key = prompt('Enter label key:');
-    const value = prompt('Enter label value:');
-    if (key && value) {
+    if (newLabel.key && newLabel.value) {
       updateConfig({
-        labels: { ...config.labels, [key]: value }
+        labels: { ...config.labels, [newLabel.key]: newLabel.value }
       });
+      setNewLabel({ key: '', value: '' });
     }
   };
 
@@ -212,12 +149,11 @@ export function DeploymentForm({
   };
 
   const addAnnotation = () => {
-    const key = prompt('Enter annotation key:');
-    const value = prompt('Enter annotation value:');
-    if (key && value) {
+    if (newAnnotation.key && newAnnotation.value) {
       updateConfig({
-        annotations: { ...config.annotations, [key]: value }
+        annotations: { ...config.annotations, [newAnnotation.key]: newAnnotation.value }
       });
+      setNewAnnotation({ key: '', value: '' });
     }
   };
 
@@ -226,31 +162,152 @@ export function DeploymentForm({
     updateConfig({ annotations: rest });
   };
 
-  const tabs = [
-    { id: 'basic' as const, label: 'Basic', icon: Server },
-    { id: 'containers' as const, label: 'Containers', icon: Database },
-    { id: 'networking' as const, label: 'Networking', icon: Network },
-    { id: 'scaling' as const, label: 'Scaling', icon: TrendingUp },
-    { id: 'storage' as const, label: 'Storage', icon: HardDrive },
-    { id: 'advanced' as const, label: 'Advanced', icon: Settings }
-  ];
+  const addVolume = () => {
+    if (newVolume.name && newVolume.mountPath) {
+      const volume = {
+        name: newVolume.name,
+        mountPath: newVolume.mountPath,
+        type: newVolume.type,
+        ...(newVolume.type === 'configMap' && { configMapName: newVolume.configMapName }),
+        ...(newVolume.type === 'secret' && { secretName: newVolume.secretName })
+      };
+      updateConfig({
+        volumes: [...config.volumes, volume]
+      });
+      setNewVolume({ name: '', mountPath: '', type: 'emptyDir', configMapName: '', secretName: '' });
+    }
+  };
+
+  const removeVolume = (index: number) => {
+    updateConfig({
+      volumes: config.volumes.filter((_, i) => i !== index)
+    });
+  };
+
+  const addIngressRule = () => {
+    if (newIngressRule.path) {
+      const rule = {
+        ...newIngressRule,
+        serviceName: newIngressRule.serviceName || `${config.appName}-service`,
+        servicePort: newIngressRule.servicePort || config.port
+      };
+      updateConfig({
+        ingress: {
+          ...config.ingress,
+          rules: [...config.ingress.rules, rule]
+        }
+      });
+      setNewIngressRule({
+        host: '',
+        path: '/',
+        pathType: 'Prefix',
+        serviceName: config.appName ? `${config.appName}-service` : '',
+        servicePort: config.port || 80
+      });
+    }
+  };
+
+  const removeIngressRule = (index: number) => {
+    updateConfig({
+      ingress: {
+        ...config.ingress,
+        rules: config.ingress.rules.filter((_, i) => i !== index)
+      }
+    });
+  };
+
+  const addTLS = () => {
+    if (newTLS.secretName && newTLS.hosts[0]) {
+      updateConfig({
+        ingress: {
+          ...config.ingress,
+          tls: [...config.ingress.tls, { ...newTLS, hosts: newTLS.hosts.filter(h => h.trim()) }]
+        }
+      });
+      setNewTLS({ secretName: '', hosts: [''] });
+    }
+  };
+
+  const removeTLS = (index: number) => {
+    updateConfig({
+      ingress: {
+        ...config.ingress,
+        tls: config.ingress.tls.filter((_, i) => i !== index)
+      }
+    });
+  };
+
+  const updateTLSHost = (index: number, value: string) => {
+    const hosts = [...newTLS.hosts];
+    hosts[index] = value;
+    setNewTLS({ ...newTLS, hosts });
+  };
+
+  const addTLSHost = () => {
+    setNewTLS({ ...newTLS, hosts: [...newTLS.hosts, ''] });
+  };
+
+  const removeTLSHost = (index: number) => {
+    setNewTLS({ ...newTLS, hosts: newTLS.hosts.filter((_, i) => i !== index) });
+  };
+
+  // Initialize containers if empty
+  if (!config.containers || config.containers.length === 0) {
+    const defaultContainer: Container = {
+      name: config.appName || 'app',
+      image: '',
+      port: config.targetPort || 8080,
+      env: [],
+      resources: {
+        requests: { cpu: '', memory: '' },
+        limits: { cpu: '', memory: '' }
+      },
+      volumeMounts: []
+    };
+    updateConfig({ containers: [defaultContainer] });
+  }
+
+  // Validation functions
+  const validateHPA = () => {
+    const errors = [];
+    if (config.hpa.enabled) {
+      if (config.hpa.minReplicas <= 0) {
+        errors.push('Minimum replicas must be greater than 0');
+      }
+      if (config.hpa.maxReplicas <= config.hpa.minReplicas) {
+        errors.push('Maximum replicas must be greater than minimum replicas');
+      }
+      if (!config.hpa.targetCPUUtilizationPercentage && !config.hpa.targetMemoryUtilizationPercentage) {
+        errors.push('At least one target metric (CPU or Memory) is required');
+      }
+      if (config.hpa.targetCPUUtilizationPercentage && (config.hpa.targetCPUUtilizationPercentage <= 0 || config.hpa.targetCPUUtilizationPercentage > 100)) {
+        errors.push('CPU target must be between 1-100%');
+      }
+      if (config.hpa.targetMemoryUtilizationPercentage && (config.hpa.targetMemoryUtilizationPercentage <= 0 || config.hpa.targetMemoryUtilizationPercentage > 100)) {
+        errors.push('Memory target must be between 1-100%');
+      }
+    }
+    return errors;
+  };
+
+  const hpaErrors = validateHPA();
 
   return (
     <div className="space-y-6">
       {/* Tab Navigation */}
       <div className="border-b border-gray-200">
-        <nav className="flex space-x-8 overflow-x-auto">
+        <nav className="flex space-x-8">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center space-x-2 py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+                className={`${
                   activeTab === tab.id
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2`}
               >
                 <Icon className="w-4 h-4" />
                 <span>{tab.label}</span>
@@ -266,6 +323,7 @@ export function DeploymentForm({
         {activeTab === 'basic' && (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Application Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Application Name *
@@ -279,6 +337,7 @@ export function DeploymentForm({
                 />
               </div>
 
+              {/* Namespace */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Namespace
@@ -296,6 +355,7 @@ export function DeploymentForm({
                 </select>
               </div>
 
+              {/* Replicas */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Replicas
@@ -307,8 +367,15 @@ export function DeploymentForm({
                   onChange={(e) => updateConfig({ replicas: parseInt(e.target.value) || 1 })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
+                {config.hpa.enabled && (
+                  <p className="mt-1 text-xs text-amber-600">
+                    <AlertTriangle className="w-3 h-3 inline mr-1" />
+                    HPA is enabled. This value will be used as the initial replica count.
+                  </p>
+                )}
               </div>
 
+              {/* Service Type */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Service Type
@@ -324,6 +391,7 @@ export function DeploymentForm({
                 </select>
               </div>
 
+              {/* Service Port */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Service Port
@@ -338,6 +406,7 @@ export function DeploymentForm({
                 />
               </div>
 
+              {/* Target Port */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Target Port
@@ -352,6 +421,102 @@ export function DeploymentForm({
                 />
               </div>
             </div>
+
+            {/* Labels */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Labels
+              </label>
+              <div className="flex space-x-2 mb-2">
+                <input
+                  type="text"
+                  value={newLabel.key}
+                  onChange={(e) => setNewLabel({ ...newLabel, key: e.target.value })}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="key"
+                />
+                <input
+                  type="text"
+                  value={newLabel.value}
+                  onChange={(e) => setNewLabel({ ...newLabel, value: e.target.value })}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="value"
+                />
+                <button
+                  onClick={addLabel}
+                  disabled={!newLabel.key || !newLabel.value}
+                  className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+              
+              {Object.entries(config.labels).length > 0 && (
+                <div className="space-y-1">
+                  {Object.entries(config.labels).map(([key, value]) => (
+                    <div key={key} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-lg">
+                      <span className="text-sm text-gray-900">
+                        <span className="font-medium">{key}</span>: {value}
+                      </span>
+                      <button
+                        onClick={() => removeLabel(key)}
+                        className="text-gray-400 hover:text-red-600"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Annotations */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Annotations
+              </label>
+              <div className="flex space-x-2 mb-2">
+                <input
+                  type="text"
+                  value={newAnnotation.key}
+                  onChange={(e) => setNewAnnotation({ ...newAnnotation, key: e.target.value })}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="key"
+                />
+                <input
+                  type="text"
+                  value={newAnnotation.value}
+                  onChange={(e) => setNewAnnotation({ ...newAnnotation, value: e.target.value })}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="value"
+                />
+                <button
+                  onClick={addAnnotation}
+                  disabled={!newAnnotation.key || !newAnnotation.value}
+                  className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+              
+              {Object.entries(config.annotations).length > 0 && (
+                <div className="space-y-1">
+                  {Object.entries(config.annotations).map(([key, value]) => (
+                    <div key={key} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-lg">
+                      <span className="text-sm text-gray-900">
+                        <span className="font-medium">{key}</span>: {value}
+                      </span>
+                      <button
+                        onClick={() => removeAnnotation(key)}
+                        className="text-gray-400 hover:text-red-600"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -362,43 +527,34 @@ export function DeploymentForm({
               <h3 className="text-lg font-medium text-gray-900">Container Configuration</h3>
               <button
                 onClick={addContainer}
-                className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm"
+                className="inline-flex items-center px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
               >
-                <Plus className="w-4 h-4 mr-1" />
+                <Plus className="w-4 h-4 mr-2" />
                 Add Container
               </button>
             </div>
 
-            {config.containers.map((container, containerIndex) => (
+            {config.containers?.map((container, containerIndex) => (
               <div key={containerIndex} className="border border-gray-200 rounded-lg p-4 space-y-4">
                 <div className="flex items-center justify-between">
                   <h4 className="font-medium text-gray-900">
                     Container {containerIndex + 1}
                     {container.name && `: ${container.name}`}
                   </h4>
-                  <div className="flex items-center space-x-2">
+                  {config.containers && config.containers.length > 1 && (
                     <button
-                      onClick={() => duplicateContainer(containerIndex)}
-                      className="p-1 text-gray-400 hover:text-blue-600 rounded"
-                      title="Duplicate container"
+                      onClick={() => removeContainer(containerIndex)}
+                      className="text-red-600 hover:text-red-800"
                     >
-                      <Copy className="w-4 h-4" />
+                      <X className="w-4 h-4" />
                     </button>
-                    {config.containers.length > 1 && (
-                      <button
-                        onClick={() => removeContainer(containerIndex)}
-                        className="p-1 text-gray-400 hover:text-red-600 rounded"
-                        title="Remove container"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Container Name */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       Container Name *
                     </label>
                     <input
@@ -406,13 +562,14 @@ export function DeploymentForm({
                       value={container.name}
                       onChange={(e) => updateContainer(containerIndex, { name: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="web-server"
+                      placeholder="app"
                     />
                   </div>
 
+                  {/* Container Image */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Container Image *
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Image *
                     </label>
                     <input
                       type="text"
@@ -423,9 +580,10 @@ export function DeploymentForm({
                     />
                   </div>
 
+                  {/* Container Port */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Container Port
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Port
                     </label>
                     <input
                       type="number"
@@ -438,14 +596,118 @@ export function DeploymentForm({
                   </div>
                 </div>
 
+                {/* Environment Variables */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Environment Variables
+                    </label>
+                    <button
+                      onClick={() => addEnvVar(containerIndex)}
+                      className="inline-flex items-center px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      Add
+                    </button>
+                  </div>
+                  
+                  {container.env.map((envVar, envIndex) => (
+                    <div key={envIndex} className="flex space-x-2 mb-2">
+                      <input
+                        type="text"
+                        value={envVar.name}
+                        onChange={(e) => updateEnvVar(containerIndex, envIndex, { name: e.target.value })}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="ENV_NAME"
+                      />
+                      
+                      {envVar.valueFrom ? (
+                        <div className="flex-1 flex space-x-2">
+                          <select
+                            value={envVar.valueFrom.type}
+                            onChange={(e) => updateEnvVar(containerIndex, envIndex, {
+                              valueFrom: { ...envVar.valueFrom!, type: e.target.value as 'configMap' | 'secret' }
+                            })}
+                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          >
+                            <option value="configMap">ConfigMap</option>
+                            <option value="secret">Secret</option>
+                          </select>
+                          
+                          <select
+                            value={envVar.valueFrom.name}
+                            onChange={(e) => updateEnvVar(containerIndex, envIndex, {
+                              valueFrom: { ...envVar.valueFrom!, name: e.target.value }
+                            })}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          >
+                            <option value="">Select {envVar.valueFrom.type}</option>
+                            {envVar.valueFrom.type === 'configMap' 
+                              ? availableConfigMaps.map(cm => (
+                                  <option key={cm.name} value={cm.name}>{cm.name}</option>
+                                ))
+                              : availableSecrets.map(secret => (
+                                  <option key={secret.name} value={secret.name}>{secret.name}</option>
+                                ))
+                            }
+                          </select>
+                          
+                          <input
+                            type="text"
+                            value={envVar.valueFrom.key}
+                            onChange={(e) => updateEnvVar(containerIndex, envIndex, {
+                              valueFrom: { ...envVar.valueFrom!, key: e.target.value }
+                            })}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="key"
+                          />
+                        </div>
+                      ) : (
+                        <input
+                          type="text"
+                          value={envVar.value || ''}
+                          onChange={(e) => updateEnvVar(containerIndex, envIndex, { value: e.target.value })}
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="value"
+                        />
+                      )}
+                      
+                      <button
+                        onClick={() => {
+                          const currentEnvVar = container.env[envIndex];
+                          if (currentEnvVar.valueFrom) {
+                            updateEnvVar(containerIndex, envIndex, { value: '', valueFrom: undefined });
+                          } else {
+                            updateEnvVar(containerIndex, envIndex, { 
+                              value: undefined, 
+                              valueFrom: { type: 'configMap', name: '', key: '' }
+                            });
+                          }
+                        }}
+                        className="px-2 py-2 bg-gray-100 text-gray-600 rounded hover:bg-gray-200"
+                        title={envVar.valueFrom ? 'Switch to direct value' : 'Switch to reference'}
+                      >
+                        <Settings className="w-3 h-3" />
+                      </button>
+                      
+                      <button
+                        onClick={() => removeEnvVar(containerIndex, envIndex)}
+                        className="px-2 py-2 text-red-600 hover:text-red-800"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
                 {/* Resource Limits */}
                 <div>
-                  <h5 className="font-medium text-gray-900 mb-3">Resource Limits</h5>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Resource Limits
+                  </label>
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        CPU Requests
-                      </label>
+                      <label className="block text-xs text-gray-600 mb-1">CPU Requests</label>
                       <input
                         type="text"
                         value={container.resources.requests.cpu}
@@ -459,11 +721,8 @@ export function DeploymentForm({
                         placeholder="100m"
                       />
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Memory Requests
-                      </label>
+                      <label className="block text-xs text-gray-600 mb-1">Memory Requests</label>
                       <input
                         type="text"
                         value={container.resources.requests.memory}
@@ -477,11 +736,8 @@ export function DeploymentForm({
                         placeholder="128Mi"
                       />
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        CPU Limits
-                      </label>
+                      <label className="block text-xs text-gray-600 mb-1">CPU Limits</label>
                       <input
                         type="text"
                         value={container.resources.limits.cpu}
@@ -495,11 +751,8 @@ export function DeploymentForm({
                         placeholder="500m"
                       />
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Memory Limits
-                      </label>
+                      <label className="block text-xs text-gray-600 mb-1">Memory Limits</label>
                       <input
                         type="text"
                         value={container.resources.limits.memory}
@@ -510,121 +763,35 @@ export function DeploymentForm({
                           }
                         })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="512Mi"
+                        placeholder="256Mi"
                       />
                     </div>
                   </div>
-                </div>
-
-                {/* Environment Variables */}
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <h5 className="font-medium text-gray-900">Environment Variables</h5>
-                    <button
-                      onClick={() => addEnvVar(containerIndex)}
-                      className="inline-flex items-center px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700"
-                    >
-                      <Plus className="w-3 h-3 mr-1" />
-                      Add
-                    </button>
-                  </div>
-
-                  {container.env.map((envVar, envIndex) => (
-                    <div key={envIndex} className="flex items-center space-x-2 mb-2">
-                      <input
-                        type="text"
-                        value={envVar.name}
-                        onChange={(e) => updateEnvVar(containerIndex, envIndex, { name: e.target.value })}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="ENV_NAME"
-                      />
-                      
-                      {envVar.valueFrom ? (
-                        <div className="flex-1 flex items-center space-x-2">
-                          <select
-                            value={envVar.valueFrom.type}
-                            onChange={(e) => updateEnvVar(containerIndex, envIndex, {
-                              valueFrom: { ...envVar.valueFrom!, type: e.target.value as 'configMap' | 'secret' }
-                            })}
-                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          >
-                            <option value="configMap">ConfigMap</option>
-                            <option value="secret">Secret</option>
-                          </select>
-                          <select
-                            value={envVar.valueFrom.name}
-                            onChange={(e) => updateEnvVar(containerIndex, envIndex, {
-                              valueFrom: { ...envVar.valueFrom!, name: e.target.value }
-                            })}
-                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          >
-                            <option value="">Select {envVar.valueFrom.type}</option>
-                            {envVar.valueFrom.type === 'configMap' 
-                              ? availableConfigMaps.map(cm => (
-                                  <option key={cm.name} value={cm.name}>{cm.name}</option>
-                                ))
-                              : availableSecrets.map(secret => (
-                                  <option key={secret.name} value={secret.name}>{secret.name}</option>
-                                ))
-                            }
-                          </select>
-                          <input
-                            type="text"
-                            value={envVar.valueFrom.key}
-                            onChange={(e) => updateEnvVar(containerIndex, envIndex, {
-                              valueFrom: { ...envVar.valueFrom!, key: e.target.value }
-                            })}
-                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            placeholder="key"
-                          />
-                        </div>
-                      ) : (
-                        <input
-                          type="text"
-                          value={envVar.value || ''}
-                          onChange={(e) => updateEnvVar(containerIndex, envIndex, { value: e.target.value })}
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="value"
-                        />
-                      )}
-
-                      <button
-                        onClick={() => updateEnvVar(containerIndex, envIndex, 
-                          envVar.valueFrom 
-                            ? { valueFrom: undefined, value: '' }
-                            : { valueFrom: { type: 'configMap', name: '', key: '' }, value: undefined }
-                        )}
-                        className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200"
-                        title={envVar.valueFrom ? 'Switch to direct value' : 'Switch to reference'}
-                      >
-                        {envVar.valueFrom ? 'Direct' : 'Ref'}
-                      </button>
-
-                      <button
-                        onClick={() => removeEnvVar(containerIndex, envIndex)}
-                        className="p-1 text-gray-400 hover:text-red-600 rounded"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
+                  {config.hpa.enabled && (
+                    <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-700">
+                      <Info className="w-3 h-3 inline mr-1" />
+                      Resource requests are required for HPA to function properly.
                     </div>
-                  ))}
+                  )}
                 </div>
 
                 {/* Volume Mounts */}
                 <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <h5 className="font-medium text-gray-900">Volume Mounts</h5>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Volume Mounts
+                    </label>
                     <button
                       onClick={() => addVolumeMount(containerIndex)}
-                      className="inline-flex items-center px-2 py-1 bg-purple-600 text-white rounded text-xs hover:bg-purple-700"
+                      className="inline-flex items-center px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
                     >
                       <Plus className="w-3 h-3 mr-1" />
                       Add
                     </button>
                   </div>
-
+                  
                   {container.volumeMounts.map((mount, mountIndex) => (
-                    <div key={mountIndex} className="flex items-center space-x-2 mb-2">
+                    <div key={mountIndex} className="flex space-x-2 mb-2">
                       <select
                         value={mount.name}
                         onChange={(e) => updateVolumeMount(containerIndex, mountIndex, { name: e.target.value })}
@@ -644,9 +811,9 @@ export function DeploymentForm({
                       />
                       <button
                         onClick={() => removeVolumeMount(containerIndex, mountIndex)}
-                        className="p-1 text-gray-400 hover:text-red-600 rounded"
+                        className="px-2 py-2 text-red-600 hover:text-red-800"
                       >
-                        <X className="w-4 h-4" />
+                        <X className="w-3 h-3" />
                       </button>
                     </div>
                   ))}
@@ -660,27 +827,25 @@ export function DeploymentForm({
         {activeTab === 'networking' && (
           <div className="space-y-6">
             {/* Ingress Configuration */}
-            <div className="border border-gray-200 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-2">
-                  <Globe className="w-5 h-5 text-orange-600" />
-                  <h3 className="text-lg font-medium text-gray-900">Ingress Configuration</h3>
-                </div>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={config.ingress.enabled}
-                    onChange={(e) => updateConfig({
-                      ingress: { ...config.ingress, enabled: e.target.checked }
-                    })}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">Enable Ingress</span>
+            <div>
+              <div className="flex items-center space-x-2 mb-4">
+                <input
+                  type="checkbox"
+                  id="enable-ingress"
+                  checked={config.ingress.enabled}
+                  onChange={(e) => updateConfig({
+                    ingress: { ...config.ingress, enabled: e.target.checked }
+                  })}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <label htmlFor="enable-ingress" className="text-sm font-medium text-gray-700">
+                  Enable Ingress
                 </label>
               </div>
 
               {config.ingress.enabled && (
-                <div className="space-y-4">
+                <div className="space-y-4 pl-6 border-l-2 border-blue-200">
+                  {/* Ingress Class */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Ingress Class
@@ -698,139 +863,254 @@ export function DeploymentForm({
 
                   {/* Ingress Rules */}
                   <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-medium text-gray-900">Ingress Rules</h4>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Ingress Rules
+                      </label>
                       <button
                         onClick={addIngressRule}
-                        className="inline-flex items-center px-2 py-1 bg-orange-600 text-white rounded text-xs hover:bg-orange-700"
+                        disabled={!newIngressRule.path}
+                        className="inline-flex items-center px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Plus className="w-3 h-3 mr-1" />
                         Add Rule
                       </button>
                     </div>
 
-                    {config.ingress.rules.map((rule, ruleIndex) => (
-                      <div key={ruleIndex} className="border border-gray-200 rounded p-3 mb-3">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                          <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Host</label>
-                            <input
-                              type="text"
-                              value={rule.host}
-                              onChange={(e) => updateIngressRule(ruleIndex, { host: e.target.value })}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              placeholder="example.com"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Path</label>
-                            <input
-                              type="text"
-                              value={rule.path}
-                              onChange={(e) => updateIngressRule(ruleIndex, { path: e.target.value })}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              placeholder="/"
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                          <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Path Type</label>
-                            <select
-                              value={rule.pathType}
-                              onChange={(e) => updateIngressRule(ruleIndex, { pathType: e.target.value as any })}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            >
-                              <option value="Prefix">Prefix</option>
-                              <option value="Exact">Exact</option>
-                              <option value="ImplementationSpecific">Implementation Specific</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Service Name</label>
-                            <input
-                              type="text"
-                              value={rule.serviceName}
-                              onChange={(e) => updateIngressRule(ruleIndex, { serviceName: e.target.value })}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              placeholder={`${config.appName}-service`}
-                            />
-                          </div>
-                          <div className="flex items-end space-x-2">
-                            <div className="flex-1">
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Service Port</label>
-                              <input
-                                type="number"
-                                value={rule.servicePort}
-                                onChange={(e) => updateIngressRule(ruleIndex, { servicePort: parseInt(e.target.value) || 80 })}
-                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              />
-                            </div>
-                            <button
-                              onClick={() => removeIngressRule(ruleIndex)}
-                              className="p-1 text-gray-400 hover:text-red-600 rounded"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
+                    {/* New Rule Form */}
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-2 mb-2 p-3 bg-gray-50 rounded-lg">
+                      <input
+                        type="text"
+                        value={newIngressRule.host}
+                        onChange={(e) => setNewIngressRule({ ...newIngressRule, host: e.target.value })}
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="example.com"
+                      />
+                      <input
+                        type="text"
+                        value={newIngressRule.path}
+                        onChange={(e) => setNewIngressRule({ ...newIngressRule, path: e.target.value })}
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="/api"
+                      />
+                      <select
+                        value={newIngressRule.pathType}
+                        onChange={(e) => setNewIngressRule({ ...newIngressRule, pathType: e.target.value as any })}
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="Prefix">Prefix</option>
+                        <option value="Exact">Exact</option>
+                        <option value="ImplementationSpecific">Implementation Specific</option>
+                      </select>
+                      <input
+                        type="text"
+                        value={newIngressRule.serviceName}
+                        onChange={(e) => setNewIngressRule({ ...newIngressRule, serviceName: e.target.value })}
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="service-name"
+                      />
+                      <input
+                        type="number"
+                        value={newIngressRule.servicePort}
+                        onChange={(e) => setNewIngressRule({ ...newIngressRule, servicePort: parseInt(e.target.value) || 80 })}
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="80"
+                      />
+                    </div>
+
+                    {/* Existing Rules */}
+                    {config.ingress.rules.map((rule, index) => (
+                      <div key={index} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-lg mb-1">
+                        <span className="text-sm text-gray-900">
+                          {rule.host || '*'} {rule.path} → {rule.serviceName}:{rule.servicePort}
+                        </span>
+                        <button
+                          onClick={() => removeIngressRule(index)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
                       </div>
                     ))}
                   </div>
 
                   {/* TLS Configuration */}
                   <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-medium text-gray-900">TLS Configuration</h4>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium text-gray-700">
+                        TLS Configuration
+                      </label>
                       <button
-                        onClick={addTLSConfig}
-                        className="inline-flex items-center px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700"
+                        onClick={addTLS}
+                        disabled={!newTLS.secretName || !newTLS.hosts[0]}
+                        className="inline-flex items-center px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Plus className="w-3 h-3 mr-1" />
                         Add TLS
                       </button>
                     </div>
 
-                    {config.ingress.tls.map((tls, tlsIndex) => (
-                      <div key={tlsIndex} className="border border-gray-200 rounded p-3 mb-3">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Secret Name</label>
-                            <select
-                              value={tls.secretName}
-                              onChange={(e) => updateTLSConfig(tlsIndex, { secretName: e.target.value })}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            >
-                              <option value="">Select Secret</option>
-                              {availableSecrets.filter(s => s.type === 'kubernetes.io/tls').map(secret => (
-                                <option key={secret.name} value={secret.name}>{secret.name}</option>
-                              ))}
-                            </select>
+                    {/* New TLS Form */}
+                    <div className="p-3 bg-gray-50 rounded-lg mb-2">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
+                        <input
+                          type="text"
+                          value={newTLS.secretName}
+                          onChange={(e) => setNewTLS({ ...newTLS, secretName: e.target.value })}
+                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="tls-secret-name"
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <label className="block text-xs font-medium text-gray-600">Hosts</label>
+                        {newTLS.hosts.map((host, index) => (
+                          <div key={index} className="flex space-x-2">
+                            <input
+                              type="text"
+                              value={host}
+                              onChange={(e) => updateTLSHost(index, e.target.value)}
+                              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              placeholder="example.com"
+                            />
+                            {newTLS.hosts.length > 1 && (
+                              <button
+                                onClick={() => removeTLSHost(index)}
+                                className="px-2 py-2 text-red-600 hover:text-red-800"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            )}
                           </div>
-                          <div className="flex items-end space-x-2">
-                            <div className="flex-1">
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Hosts</label>
-                              <input
-                                type="text"
-                                value={tls.hosts.join(', ')}
-                                onChange={(e) => updateTLSConfig(tlsIndex, { 
-                                  hosts: e.target.value.split(',').map(h => h.trim()).filter(h => h) 
-                                })}
-                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                placeholder="example.com, www.example.com"
-                              />
-                            </div>
-                            <button
-                              onClick={() => removeTLSConfig(tlsIndex)}
-                              className="p-1 text-gray-400 hover:text-red-600 rounded"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
+                        ))}
+                        <button
+                          onClick={addTLSHost}
+                          className="text-blue-600 hover:text-blue-800 text-xs"
+                        >
+                          + Add Host
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Existing TLS */}
+                    {config.ingress.tls.map((tls, index) => (
+                      <div key={index} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-lg mb-1">
+                        <span className="text-sm text-gray-900">
+                          {tls.secretName}: {tls.hosts.join(', ')}
+                        </span>
+                        <button
+                          onClick={() => removeTLS(index)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Storage Configuration */}
+        {activeTab === 'storage' && (
+          <div className="space-y-6">
+            {/* Volumes */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900">Volumes</h3>
+                <button
+                  onClick={addVolume}
+                  disabled={!newVolume.name || !newVolume.mountPath}
+                  className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Volume
+                </button>
+              </div>
+
+              {/* New Volume Form */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg mb-4">
+                <input
+                  type="text"
+                  value={newVolume.name}
+                  onChange={(e) => setNewVolume({ ...newVolume, name: e.target.value })}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="volume-name"
+                />
+                <input
+                  type="text"
+                  value={newVolume.mountPath}
+                  onChange={(e) => setNewVolume({ ...newVolume, mountPath: e.target.value })}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="/app/data"
+                />
+                <select
+                  value={newVolume.type}
+                  onChange={(e) => setNewVolume({ ...newVolume, type: e.target.value as any })}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="emptyDir">Empty Directory</option>
+                  <option value="configMap">ConfigMap</option>
+                  <option value="secret">Secret</option>
+                </select>
+                {newVolume.type === 'configMap' && (
+                  <select
+                    value={newVolume.configMapName}
+                    onChange={(e) => setNewVolume({ ...newVolume, configMapName: e.target.value })}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Select ConfigMap</option>
+                    {availableConfigMaps.map(cm => (
+                      <option key={cm.name} value={cm.name}>{cm.name}</option>
+                    ))}
+                  </select>
+                )}
+                {newVolume.type === 'secret' && (
+                  <select
+                    value={newVolume.secretName}
+                    onChange={(e) => setNewVolume({ ...newVolume, secretName: e.target.value })}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Select Secret</option>
+                    {availableSecrets.map(secret => (
+                      <option key={secret.name} value={secret.name}>{secret.name}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {/* Existing Volumes */}
+              {config.volumes.length > 0 && (
+                <div className="space-y-2">
+                  {config.volumes.map((volume, index) => (
+                    <div key={index} className="flex items-center justify-between bg-white border border-gray-200 px-4 py-3 rounded-lg">
+                      <div>
+                        <span className="font-medium text-gray-900">{volume.name}</span>
+                        <span className="text-gray-500 ml-2">→ {volume.mountPath}</span>
+                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded ml-2">
+                          {volume.type}
+                        </span>
+                        {volume.type === 'configMap' && volume.configMapName && (
+                          <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded ml-1">
+                            {volume.configMapName}
+                          </span>
+                        )}
+                        {volume.type === 'secret' && volume.secretName && (
+                          <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded ml-1">
+                            {volume.secretName}
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => removeVolume(index)}
+                        className="text-red-600 hover:text-red-800"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -841,39 +1121,58 @@ export function DeploymentForm({
         {activeTab === 'scaling' && (
           <div className="space-y-6">
             {/* HPA Configuration */}
-            <div className="border border-gray-200 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-2">
-                  <TrendingUp className="w-5 h-5 text-purple-600" />
-                  <h3 className="text-lg font-medium text-gray-900">Horizontal Pod Autoscaler</h3>
+            <div className="bg-purple-50 border border-purple-200 rounded-xl p-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center">
+                  <TrendingUp className="w-6 h-6 text-white" />
                 </div>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={config.hpa.enabled}
-                    onChange={(e) => updateConfig({
-                      hpa: { ...config.hpa, enabled: e.target.checked }
-                    })}
-                    className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">Enable Auto-scaling</span>
+                <div>
+                  <h3 className="text-lg font-semibold text-purple-900">Horizontal Pod Autoscaler</h3>
+                  <p className="text-sm text-purple-700">Automatically scale your deployment based on resource usage</p>
+                </div>
+              </div>
+
+              {/* Enable HPA Toggle */}
+              <div className="flex items-center space-x-3 mb-6">
+                <input
+                  type="checkbox"
+                  id="enable-hpa"
+                  checked={config.hpa.enabled}
+                  onChange={(e) => updateConfig({
+                    hpa: { ...config.hpa, enabled: e.target.checked }
+                  })}
+                  className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 focus:ring-2"
+                />
+                <label htmlFor="enable-hpa" className="text-sm font-medium text-purple-900">
+                  Enable Horizontal Pod Autoscaler
                 </label>
               </div>
 
               {config.hpa.enabled && (
-                <div className="space-y-4">
-                  {/* Basic HPA Settings */}
-                  <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
-                    <h4 className="font-medium text-purple-900 mb-3 flex items-center space-x-2">
-                      <Info className="w-4 h-4" />
-                      <span>Scaling Configuration</span>
-                    </h4>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-6 pl-6 border-l-2 border-purple-300">
+                  {/* Validation Errors */}
+                  {hpaErrors.length > 0 && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <AlertTriangle className="w-5 h-5 text-red-600" />
+                        <span className="font-medium text-red-900">Configuration Issues</span>
+                      </div>
+                      <ul className="text-sm text-red-700 space-y-1">
+                        {hpaErrors.map((error, index) => (
+                          <li key={index}>• {error}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Scaling Range */}
+                  <div>
+                    <label className="block text-sm font-medium text-purple-900 mb-3">
+                      Scaling Range
+                    </label>
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-purple-700 mb-2">
-                          Minimum Replicas *
-                        </label>
+                        <label className="block text-xs text-purple-700 mb-1">Minimum Replicas *</label>
                         <input
                           type="number"
                           min="1"
@@ -881,57 +1180,41 @@ export function DeploymentForm({
                           onChange={(e) => updateConfig({
                             hpa: { ...config.hpa, minReplicas: parseInt(e.target.value) || 1 }
                           })}
-                          className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                            config.hpa.minReplicas <= 0 ? 'border-red-300' : 'border-gray-300'
+                          }`}
                         />
-                        <p className="text-xs text-purple-600 mt-1">
-                          Minimum number of pod replicas
-                        </p>
                       </div>
-
                       <div>
-                        <label className="block text-sm font-medium text-purple-700 mb-2">
-                          Maximum Replicas *
-                        </label>
+                        <label className="block text-xs text-purple-700 mb-1">Maximum Replicas *</label>
                         <input
                           type="number"
-                          min={config.hpa.minReplicas}
+                          min="1"
                           value={config.hpa.maxReplicas}
                           onChange={(e) => updateConfig({
                             hpa: { ...config.hpa, maxReplicas: parseInt(e.target.value) || 10 }
                           })}
-                          className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                            config.hpa.maxReplicas <= config.hpa.minReplicas ? 'border-red-300' : 'border-gray-300'
+                          }`}
                         />
-                        <p className="text-xs text-purple-600 mt-1">
-                          Maximum number of pod replicas
-                        </p>
                       </div>
                     </div>
-
-                    {/* Validation Warning */}
                     {config.hpa.maxReplicas <= config.hpa.minReplicas && (
-                      <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                        <div className="flex items-center space-x-2 text-red-700">
-                          <AlertTriangle className="w-4 h-4" />
-                          <span className="text-sm font-medium">
-                            Maximum replicas must be greater than minimum replicas
-                          </span>
-                        </div>
-                      </div>
+                      <p className="mt-1 text-xs text-red-600">
+                        Maximum replicas must be greater than minimum replicas
+                      </p>
                     )}
                   </div>
 
-                  {/* Metrics Configuration */}
-                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                    <h4 className="font-medium text-blue-900 mb-3 flex items-center space-x-2">
-                      <Activity className="w-4 h-4" />
-                      <span>Scaling Metrics</span>
-                    </h4>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Scaling Metrics */}
+                  <div>
+                    <label className="block text-sm font-medium text-purple-900 mb-3">
+                      Scaling Metrics
+                    </label>
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-blue-700 mb-2">
-                          Target CPU Utilization (%)
-                        </label>
+                        <label className="block text-xs text-purple-700 mb-1">Target CPU Utilization (%)</label>
                         <input
                           type="number"
                           min="1"
@@ -943,18 +1226,12 @@ export function DeploymentForm({
                               targetCPUUtilizationPercentage: e.target.value ? parseInt(e.target.value) : undefined 
                             }
                           })}
-                          className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                           placeholder="80"
                         />
-                        <p className="text-xs text-blue-600 mt-1">
-                          Scale when average CPU usage exceeds this percentage
-                        </p>
                       </div>
-
                       <div>
-                        <label className="block text-sm font-medium text-blue-700 mb-2">
-                          Target Memory Utilization (%)
-                        </label>
+                        <label className="block text-xs text-purple-700 mb-1">Target Memory Utilization (%)</label>
                         <input
                           type="number"
                           min="1"
@@ -966,330 +1243,100 @@ export function DeploymentForm({
                               targetMemoryUtilizationPercentage: e.target.value ? parseInt(e.target.value) : undefined 
                             }
                           })}
-                          className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                           placeholder="70"
                         />
-                        <p className="text-xs text-blue-600 mt-1">
-                          Scale when average memory usage exceeds this percentage
-                        </p>
                       </div>
                     </div>
-
-                    {/* Metrics Validation */}
                     {!config.hpa.targetCPUUtilizationPercentage && !config.hpa.targetMemoryUtilizationPercentage && (
-                      <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                        <div className="flex items-center space-x-2 text-yellow-700">
-                          <AlertTriangle className="w-4 h-4" />
-                          <span className="text-sm font-medium">
-                            At least one target metric (CPU or Memory) is required for auto-scaling
-                          </span>
+                      <p className="mt-1 text-xs text-amber-600">
+                        <AlertTriangle className="w-3 h-3 inline mr-1" />
+                        At least one target metric (CPU or Memory) is required
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Scaling Behavior Preview */}
+                  <div className="bg-white/60 backdrop-blur-sm rounded-lg p-4 border border-purple-200">
+                    <div className="flex items-center space-x-2 mb-3">
+                      <Activity className="w-5 h-5 text-purple-600" />
+                      <span className="font-medium text-purple-900">Scaling Behavior</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                      <div className="text-center">
+                        <div className="text-lg font-bold text-purple-800">{config.hpa.minReplicas}</div>
+                        <div className="text-xs text-purple-600">Min Replicas</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-lg font-bold text-purple-800">{config.replicas}</div>
+                        <div className="text-xs text-purple-600">Current</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-lg font-bold text-purple-800">{config.hpa.maxReplicas}</div>
+                        <div className="text-xs text-purple-600">Max Replicas</div>
+                      </div>
+                    </div>
+                    
+                    {(config.hpa.targetCPUUtilizationPercentage || config.hpa.targetMemoryUtilizationPercentage) && (
+                      <div className="mt-3 pt-3 border-t border-purple-200">
+                        <div className="text-xs text-purple-700">
+                          <strong>Active Thresholds:</strong>
+                          {config.hpa.targetCPUUtilizationPercentage && (
+                            <span className="ml-2">CPU: {config.hpa.targetCPUUtilizationPercentage}%</span>
+                          )}
+                          {config.hpa.targetMemoryUtilizationPercentage && (
+                            <span className="ml-2">Memory: {config.hpa.targetMemoryUtilizationPercentage}%</span>
+                          )}
                         </div>
                       </div>
                     )}
                   </div>
 
-                  {/* HPA Behavior Preview */}
-                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                    <h4 className="font-medium text-gray-900 mb-3 flex items-center space-x-2">
-                      <TrendingUp className="w-4 h-4" />
-                      <span>Scaling Behavior Preview</span>
-                    </h4>
-                    
-                    <div className="text-sm text-gray-700 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span>Current Replicas:</span>
-                        <span className="font-medium">{config.replicas}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span>Scaling Range:</span>
-                        <span className="font-medium">{config.hpa.minReplicas} - {config.hpa.maxReplicas} replicas</span>
-                      </div>
-                      {config.hpa.targetCPUUtilizationPercentage && (
-                        <div className="flex items-center justify-between">
-                          <span>CPU Threshold:</span>
-                          <span className="font-medium">{config.hpa.targetCPUUtilizationPercentage}%</span>
-                        </div>
-                      )}
-                      {config.hpa.targetMemoryUtilizationPercentage && (
-                        <div className="flex items-center justify-between">
-                          <span>Memory Threshold:</span>
-                          <span className="font-medium">{config.hpa.targetMemoryUtilizationPercentage}%</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded">
-                      <p className="text-xs text-blue-700">
-                        <strong>How it works:</strong> The HPA will automatically scale your deployment up when resource utilization exceeds the target thresholds, and scale down when utilization is below the targets. Scaling decisions are made every 15 seconds, with a 3-minute stabilization window to prevent flapping.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Resource Requirements Notice */}
-                  <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
+                  {/* Requirements Notice */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <div className="flex items-start space-x-2">
-                      <AlertTriangle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <h4 className="font-medium text-orange-900 mb-2">Resource Requirements</h4>
-                        <div className="text-sm text-orange-700 space-y-1">
-                          <p>• CPU-based scaling requires CPU requests to be set on containers</p>
-                          <p>• Memory-based scaling requires memory requests to be set on containers</p>
-                          <p>• Metrics server must be installed in your cluster</p>
-                          <p>• HPA checks metrics every 15 seconds and makes scaling decisions accordingly</p>
-                        </div>
+                      <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                      <div className="text-sm text-blue-800">
+                        <p className="font-medium mb-1">Requirements for HPA:</p>
+                        <ul className="text-xs space-y-1">
+                          <li>• Resource requests must be specified for containers</li>
+                          <li>• Metrics server must be installed in your cluster</li>
+                          <li>• HPA will automatically adjust replicas based on resource usage</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* How It Works */}
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-start space-x-2">
+                      <TrendingUp className="w-5 h-5 text-gray-600 flex-shrink-0 mt-0.5" />
+                      <div className="text-sm text-gray-700">
+                        <p className="font-medium mb-1">How HPA Works:</p>
+                        <ul className="text-xs space-y-1">
+                          <li>• Monitors resource usage every 15 seconds</li>
+                          <li>• Scales up when usage exceeds target thresholds</li>
+                          <li>• Scales down when usage is below target for 5 minutes</li>
+                          <li>• Respects min/max replica limits you set</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Manual Scaling Info */}
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                    <div className="flex items-start space-x-2">
+                      <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                      <div className="text-sm text-amber-800">
+                        <p className="font-medium mb-1">Manual vs Automatic Scaling:</p>
+                        <p className="text-xs">
+                          When HPA is enabled, the replica count you set above ({config.replicas}) will be used as the initial number of replicas. 
+                          HPA will then automatically adjust this number between {config.hpa.minReplicas} and {config.hpa.maxReplicas} based on resource usage.
+                        </p>
                       </div>
                     </div>
                   </div>
                 </div>
-              )}
-            </div>
-
-            {/* Manual Scaling Info */}
-            <div className="border border-gray-200 rounded-lg p-4">
-              <div className="flex items-center space-x-2 mb-3">
-                <Server className="w-5 h-5 text-blue-600" />
-                <h3 className="text-lg font-medium text-gray-900">Manual Scaling</h3>
-              </div>
-              
-              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                <p className="text-sm text-blue-700 mb-3">
-                  When HPA is disabled, you can manually control the number of replicas using the basic configuration.
-                </p>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-blue-900">Current Replicas:</span>
-                  <span className="text-lg font-bold text-blue-800">{config.replicas}</span>
-                </div>
-                {config.hpa.enabled && (
-                  <p className="text-xs text-blue-600 mt-2">
-                    <strong>Note:</strong> When HPA is enabled, manual replica count serves as the initial value. HPA will override this based on resource utilization.
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Storage Configuration */}
-        {activeTab === 'storage' && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900">Volume Configuration</h3>
-              <button
-                onClick={addVolume}
-                className="inline-flex items-center px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200 text-sm"
-              >
-                <Plus className="w-4 h-4 mr-1" />
-                Add Volume
-              </button>
-            </div>
-
-            {config.volumes.map((volume, volumeIndex) => (
-              <div key={volumeIndex} className="border border-gray-200 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="font-medium text-gray-900">Volume {volumeIndex + 1}</h4>
-                  <button
-                    onClick={() => removeVolume(volumeIndex)}
-                    className="p-1 text-gray-400 hover:text-red-600 rounded"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Volume Name *
-                    </label>
-                    <input
-                      type="text"
-                      value={volume.name}
-                      onChange={(e) => updateVolume(volumeIndex, { name: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="data-volume"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Volume Type
-                    </label>
-                    <select
-                      value={volume.type}
-                      onChange={(e) => updateVolume(volumeIndex, { type: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="emptyDir">Empty Directory</option>
-                      <option value="configMap">ConfigMap</option>
-                      <option value="secret">Secret</option>
-                    </select>
-                  </div>
-
-                  {volume.type === 'configMap' && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        ConfigMap
-                      </label>
-                      <select
-                        value={volume.configMapName || ''}
-                        onChange={(e) => updateVolume(volumeIndex, { configMapName: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value="">Select ConfigMap</option>
-                        {availableConfigMaps.map(cm => (
-                          <option key={cm.name} value={cm.name}>{cm.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-
-                  {volume.type === 'secret' && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Secret
-                      </label>
-                      <select
-                        value={volume.secretName || ''}
-                        onChange={(e) => updateVolume(volumeIndex, { secretName: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value="">Select Secret</option>
-                        {availableSecrets.map(secret => (
-                          <option key={secret.name} value={secret.name}>{secret.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-
-            {config.volumes.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                <HardDrive className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                <p>No volumes configured</p>
-                <p className="text-sm">Add volumes to provide persistent or shared storage for your containers</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Advanced Configuration */}
-        {activeTab === 'advanced' && (
-          <div className="space-y-6">
-            {/* Labels */}
-            <div className="border border-gray-200 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-900">Labels</h3>
-                <button
-                  onClick={addLabel}
-                  className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm"
-                >
-                  <Plus className="w-4 h-4 mr-1" />
-                  Add Label
-                </button>
-              </div>
-
-              {Object.entries(config.labels).length > 0 ? (
-                <div className="space-y-2">
-                  {Object.entries(config.labels).map(([key, value]) => (
-                    <div key={key} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-lg">
-                      <span className="text-sm text-gray-900">
-                        <span className="font-medium">{key}</span>: {value}
-                      </span>
-                      <button
-                        onClick={() => removeLabel(key)}
-                        className="text-gray-400 hover:text-red-600"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-500 text-sm">No labels configured</p>
-              )}
-            </div>
-
-            {/* Annotations */}
-            <div className="border border-gray-200 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-900">Annotations</h3>
-                <button
-                  onClick={addAnnotation}
-                  className="inline-flex items-center px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 text-sm"
-                >
-                  <Plus className="w-4 h-4 mr-1" />
-                  Add Annotation
-                </button>
-              </div>
-
-              {Object.entries(config.annotations).length > 0 ? (
-                <div className="space-y-2">
-                  {Object.entries(config.annotations).map(([key, value]) => (
-                    <div key={key} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-lg">
-                      <span className="text-sm text-gray-900">
-                        <span className="font-medium">{key}</span>: {value}
-                      </span>
-                      <button
-                        onClick={() => removeAnnotation(key)}
-                        className="text-gray-400 hover:text-red-600"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-500 text-sm">No annotations configured</p>
-              )}
-            </div>
-
-            {/* ConfigMap References */}
-            <div className="border border-gray-200 rounded-lg p-4">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Referenced ConfigMaps</h3>
-              {availableConfigMaps.length > 0 ? (
-                <div className="space-y-2">
-                  {availableConfigMaps.map(cm => (
-                    <div key={cm.name} className="flex items-center justify-between bg-green-50 px-3 py-2 rounded-lg">
-                      <div>
-                        <span className="text-sm font-medium text-green-900">{cm.name}</span>
-                        <span className="text-xs text-green-600 ml-2">({cm.namespace})</span>
-                      </div>
-                      <span className="text-xs text-green-600">
-                        {Object.keys(cm.data).length} key{Object.keys(cm.data).length !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-500 text-sm">No ConfigMaps available</p>
-              )}
-            </div>
-
-            {/* Secret References */}
-            <div className="border border-gray-200 rounded-lg p-4">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Referenced Secrets</h3>
-              {availableSecrets.length > 0 ? (
-                <div className="space-y-2">
-                  {availableSecrets.map(secret => (
-                    <div key={secret.name} className="flex items-center justify-between bg-orange-50 px-3 py-2 rounded-lg">
-                      <div>
-                        <span className="text-sm font-medium text-orange-900">{secret.name}</span>
-                        <span className="text-xs text-orange-600 ml-2">({secret.namespace})</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-xs text-orange-600">
-                          {Object.keys(secret.data).length} key{Object.keys(secret.data).length !== 1 ? 's' : ''}
-                        </span>
-                        <span className="px-1 py-0.5 bg-orange-200 text-orange-800 rounded text-xs">
-                          {secret.type}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-500 text-sm">No Secrets available</p>
               )}
             </div>
           </div>
@@ -1298,3 +1345,5 @@ export function DeploymentForm({
     </div>
   );
 }
+
+export { DeploymentForm }
