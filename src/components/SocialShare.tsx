@@ -7,12 +7,15 @@ interface SocialShareProps {
 
 interface GitHubRepo {
   stargazers_count: number;
+  name: string;
+  full_name: string;
 }
 
 export function SocialShare({ className = '' }: SocialShareProps) {
   const [copied, setCopied] = useState(false);
   const [starCount, setStarCount] = useState<number | null>(null);
   const [isLoadingStars, setIsLoadingStars] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
   
   const shareData = {
     title: 'Kube Composer - Free Kubernetes YAML Generator',
@@ -25,32 +28,42 @@ export function SocialShare({ className = '' }: SocialShareProps) {
     const fetchStarCount = async () => {
       try {
         setIsLoadingStars(true);
+        setApiError(null);
         
-        // Check cache first (cache for 10 minutes)
+        // Check cache first (cache for 5 minutes for debugging)
         const cacheKey = 'github-stars-kube-composer';
         const cached = localStorage.getItem(cacheKey);
         
         if (cached) {
           const { count, timestamp } = JSON.parse(cached);
-          const tenMinutes = 10 * 60 * 1000;
+          const fiveMinutes = 5 * 60 * 1000; // Reduced cache time for debugging
           
-          if (Date.now() - timestamp < tenMinutes) {
+          if (Date.now() - timestamp < fiveMinutes) {
+            console.log('Using cached star count:', count);
             setStarCount(count);
             setIsLoadingStars(false);
             return;
           }
         }
 
+        console.log('Fetching GitHub stars from API...');
+        
         // Fetch from GitHub API
         const response = await fetch('https://api.github.com/repos/same7ammar/kube-composer', {
           headers: {
             'Accept': 'application/vnd.github.v3+json',
+            'User-Agent': 'kube-composer-app'
           },
         });
 
+        console.log('GitHub API response status:', response.status);
+
         if (response.ok) {
           const data: GitHubRepo = await response.json();
+          console.log('GitHub API response data:', data);
+          
           const stars = data.stargazers_count || 0;
+          console.log('Star count from API:', stars);
           
           setStarCount(stars);
           
@@ -60,14 +73,34 @@ export function SocialShare({ className = '' }: SocialShareProps) {
             timestamp: Date.now()
           }));
         } else {
-          console.log('GitHub API response not ok:', response.status);
-          // Set a default value if API fails
-          setStarCount(0);
+          const errorText = await response.text();
+          console.error('GitHub API error:', response.status, errorText);
+          setApiError(`API Error: ${response.status}`);
+          
+          // Try to use cached value even if expired
+          if (cached) {
+            const { count } = JSON.parse(cached);
+            setStarCount(count);
+          } else {
+            setStarCount(0);
+          }
         }
       } catch (error) {
-        console.log('Error fetching GitHub stars:', error);
-        // Set a default value if fetch fails
-        setStarCount(0);
+        console.error('Error fetching GitHub stars:', error);
+        setApiError('Network Error');
+        
+        // Try to use cached value even if expired
+        const cached = localStorage.getItem('github-stars-kube-composer');
+        if (cached) {
+          try {
+            const { count } = JSON.parse(cached);
+            setStarCount(count);
+          } catch {
+            setStarCount(0);
+          }
+        } else {
+          setStarCount(0);
+        }
       } finally {
         setIsLoadingStars(false);
       }
@@ -119,7 +152,7 @@ export function SocialShare({ className = '' }: SocialShareProps) {
         target="_blank"
         rel="noopener noreferrer"
         className="group inline-flex items-center space-x-2 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-all duration-200 text-xs font-medium shadow-md hover:shadow-lg transform hover:scale-105"
-        title="Star on GitHub"
+        title={`Star on GitHub${starCount !== null ? ` (${starCount} stars)` : ''}`}
         aria-label="Star Kube Composer on GitHub"
       >
         <div className="flex items-center space-x-1">
@@ -128,10 +161,10 @@ export function SocialShare({ className = '' }: SocialShareProps) {
         </div>
         <div className="flex items-center space-x-1">
           <span className="group-hover:text-yellow-100 transition-colors duration-200">
-            {isLoadingStars ? 'Star' : 'Star'}
+            Star
           </span>
           {!isLoadingStars && starCount !== null && (
-            <span className="bg-gray-700 group-hover:bg-gray-600 px-2 py-0.5 rounded-full text-xs font-bold text-yellow-300 group-hover:text-yellow-200 transition-all duration-200">
+            <span className="bg-gray-700 group-hover:bg-gray-600 px-2 py-0.5 rounded-full text-xs font-bold text-yellow-300 group-hover:text-yellow-200 transition-all duration-200 min-w-[1.5rem] text-center">
               {formatStarCount(starCount)}
             </span>
           )}
@@ -139,6 +172,11 @@ export function SocialShare({ className = '' }: SocialShareProps) {
             <div className="bg-gray-700 px-2 py-0.5 rounded-full">
               <div className="w-4 h-3 bg-gray-600 rounded animate-pulse"></div>
             </div>
+          )}
+          {apiError && !isLoadingStars && (
+            <span className="bg-red-700 px-2 py-0.5 rounded-full text-xs font-bold text-red-200" title={apiError}>
+              ?
+            </span>
           )}
         </div>
       </a>
