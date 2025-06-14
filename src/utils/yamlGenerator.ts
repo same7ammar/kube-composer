@@ -620,6 +620,7 @@ data:
 
       validDeployments.forEach((deployment, index) => {
         if (index > 0) {
+          allResources.push('---'); // Add YAML separator between deployments
           allResources.push(''); // Add spacing between deployments
         }
         
