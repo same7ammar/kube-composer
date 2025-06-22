@@ -7,6 +7,8 @@ import { DeploymentsList } from './components/DeploymentsList';
 import { NamespacesList } from './components/NamespacesList';
 import { ConfigMapsList } from './components/ConfigMapsList';
 import { SecretsList } from './components/SecretsList';
+import { StorageVolumesList } from './components/StorageVolumesList';
+import { PVCsList } from './components/PVCsList';
 import { ArchitecturePreview } from './components/ArchitecturePreview';
 import { Footer } from './components/Footer';
 import { SocialShare } from './components/SocialShare';
@@ -14,11 +16,13 @@ import { SEOHead } from './components/SEOHead';
 import { NamespaceManager } from './components/NamespaceManager';
 import { ConfigMapManager } from './components/ConfigMapManager';
 import { SecretManager } from './components/SecretManager';
+import { StorageVolumeManager } from './components/StorageVolumeManager';
+import { PVCManager } from './components/PVCManager';
 import { ProjectSettingsManager } from './components/ProjectSettingsManager';
 import { YouTubePopup } from './components/YouTubePopup';
 import { DockerRunPopup } from './components/DockerRunPopup';
 import { generateMultiDeploymentYaml } from './utils/yamlGenerator';
-import type { DeploymentConfig, Namespace, ConfigMap, Secret, ProjectSettings, StorageVolume, PersistentVolumeClaim } from './types';
+import type { DeploymentConfig, Namespace, ConfigMap, Secret, StorageVolume, PersistentVolumeClaim, ProjectSettings } from './types';
 
 type PreviewMode = 'visual' | 'yaml' | 'summary';
 type SidebarTab = 'deployments' | 'namespaces' | 'configmaps' | 'secrets' | 'volumes';
@@ -106,6 +110,10 @@ function App() {
     ...namespaces.map(ns => ns.name),
     ...deployments.map(d => d.namespace).filter(Boolean)
   ])];
+
+  // Get available ConfigMap and Secret names for volume manager
+  const availableConfigMapNames = configMaps.map(cm => cm.name);
+  const availableSecretNames = secrets.map(s => s.name);
 
   // Helper function to remove old global labels and apply new ones
   const cleanAndMergeLabels = (
@@ -262,17 +270,15 @@ function App() {
     );
     setDeployments(updatedDeployments);
 
-    // Move any ConfigMaps/Secrets using this namespace to 'default'
+    // Move any ConfigMaps/Secrets/Volumes using this namespace to 'default'
     setConfigMaps(configMaps.map(cm => 
       cm.namespace === namespaceName ? { ...cm, namespace: 'default' } : cm
     ));
     setSecrets(secrets.map(secret => 
       secret.namespace === namespaceName ? { ...secret, namespace: 'default' } : secret
     ));
-
-    // Move any StorageVolumes/PVCs using this namespace to 'default'
-    setStorageVolumes(storageVolumes.map(sv => 
-      sv.namespace === namespaceName ? { ...sv, namespace: 'default' } : sv
+    setStorageVolumes(storageVolumes.map(volume => 
+      volume.namespace === namespaceName ? { ...volume, namespace: 'default' } : volume
     ));
     setPersistentVolumeClaims(persistentVolumeClaims.map(pvc => 
       pvc.namespace === namespaceName ? { ...pvc, namespace: 'default' } : pvc
@@ -323,6 +329,11 @@ function App() {
     }));
     setDeployments(updatedDeployments);
 
+    // Remove references from storage volumes
+    setStorageVolumes(storageVolumes.filter(volume => 
+      volume.type !== 'configMap' || volume.spec.configMap?.name !== configMapName
+    ));
+
     // Adjust selected index
     const configMapIndex = configMaps.findIndex(cm => cm.name === configMapName);
     if (selectedConfigMap >= configMapIndex) {
@@ -372,6 +383,11 @@ function App() {
     }));
     setDeployments(updatedDeployments);
 
+    // Remove references from storage volumes
+    setStorageVolumes(storageVolumes.filter(volume => 
+      volume.type !== 'secret' || volume.spec.secret?.secretName !== secretName
+    ));
+
     // Adjust selected index
     const secretIndex = secrets.findIndex(s => s.name === secretName);
     if (selectedSecret >= secretIndex) {
@@ -394,52 +410,52 @@ function App() {
     setSelectedSecret(index + 1);
   };
 
-  // Storage Volume management (placeholder functions)
-  const handleAddStorageVolume = (storageVolume: StorageVolume) => {
-    const storageVolumeWithGlobalLabels = {
-      ...storageVolume,
-      labels: cleanAndMergeLabels(storageVolume.labels)
+  // Storage Volume management
+  const handleAddStorageVolume = (volume: StorageVolume) => {
+    const volumeWithGlobalLabels = {
+      ...volume,
+      labels: cleanAndMergeLabels(volume.labels)
     };
-    setStorageVolumes([...storageVolumes, storageVolumeWithGlobalLabels]);
+    setStorageVolumes([...storageVolumes, volumeWithGlobalLabels]);
     setShowStorageVolumeManager(false);
     setSidebarTab('volumes');
     setVolumeSubTab('storage-volumes');
     setSelectedStorageVolume(storageVolumes.length);
   };
 
-  const handleDeleteStorageVolume = (storageVolumeName: string) => {
-    setStorageVolumes(storageVolumes.filter(sv => sv.name !== storageVolumeName));
+  const handleDeleteStorageVolume = (volumeName: string) => {
+    setStorageVolumes(storageVolumes.filter(v => v.name !== volumeName));
     
     // Remove references from deployments
     const updatedDeployments = deployments.map(deployment => ({
       ...deployment,
-      selectedStorageVolumes: deployment.selectedStorageVolumes.filter(name => name !== storageVolumeName)
+      selectedStorageVolumes: deployment.selectedStorageVolumes.filter(name => name !== volumeName)
     }));
     setDeployments(updatedDeployments);
 
     // Adjust selected index
-    const storageVolumeIndex = storageVolumes.findIndex(sv => sv.name === storageVolumeName);
-    if (selectedStorageVolume >= storageVolumeIndex) {
+    const volumeIndex = storageVolumes.findIndex(v => v.name === volumeName);
+    if (selectedStorageVolume >= volumeIndex) {
       setSelectedStorageVolume(Math.max(0, selectedStorageVolume - 1));
     }
   };
 
   const handleDuplicateStorageVolume = (index: number) => {
-    const storageVolumeToDuplicate = storageVolumes[index];
-    const duplicatedStorageVolume: StorageVolume = {
-      ...storageVolumeToDuplicate,
-      name: `${storageVolumeToDuplicate.name}-copy`,
-      labels: cleanAndMergeLabels(storageVolumeToDuplicate.labels),
+    const volumeToDuplicate = storageVolumes[index];
+    const duplicatedVolume: StorageVolume = {
+      ...volumeToDuplicate,
+      name: `${volumeToDuplicate.name}-copy`,
+      labels: cleanAndMergeLabels(volumeToDuplicate.labels),
       createdAt: new Date().toISOString()
     };
     
-    const newStorageVolumes = [...storageVolumes];
-    newStorageVolumes.splice(index + 1, 0, duplicatedStorageVolume);
-    setStorageVolumes(newStorageVolumes);
+    const newVolumes = [...storageVolumes];
+    newVolumes.splice(index + 1, 0, duplicatedVolume);
+    setStorageVolumes(newVolumes);
     setSelectedStorageVolume(index + 1);
   };
 
-  // PVC management (placeholder functions)
+  // PVC management
   const handleAddPVC = (pvc: PersistentVolumeClaim) => {
     const pvcWithGlobalLabels = {
       ...pvc,
@@ -461,6 +477,11 @@ function App() {
       selectedPVCs: deployment.selectedPVCs.filter(name => name !== pvcName)
     }));
     setDeployments(updatedDeployments);
+
+    // Remove references from storage volumes
+    setStorageVolumes(storageVolumes.filter(volume => 
+      volume.type !== 'persistentVolumeClaim' || volume.spec.persistentVolumeClaim?.claimName !== pvcName
+    ));
 
     // Adjust selected index
     const pvcIndex = persistentVolumeClaims.findIndex(pvc => pvc.name === pvcName);
@@ -514,9 +535,9 @@ function App() {
     }));
     setSecrets(updatedSecrets);
 
-    const updatedStorageVolumes = storageVolumes.map(storageVolume => ({
-      ...storageVolume,
-      labels: cleanAndMergeLabels(storageVolume.labels, oldGlobalLabels, newSettings.globalLabels, newSettings.name)
+    const updatedStorageVolumes = storageVolumes.map(volume => ({
+      ...volume,
+      labels: cleanAndMergeLabels(volume.labels, oldGlobalLabels, newSettings.globalLabels, newSettings.name)
     }));
     setStorageVolumes(updatedStorageVolumes);
 
@@ -558,7 +579,7 @@ function App() {
 
   // Generate YAML for preview based on mode
   const getPreviewYaml = () => {
-    if (deployments.length === 0 && namespaces.length <= 1 && configMaps.length === 0 && secrets.length === 0) {
+    if (deployments.length === 0 && namespaces.length <= 1 && configMaps.length === 0 && secrets.length === 0 && storageVolumes.length === 0 && persistentVolumeClaims.length === 0) {
       return '# No deployments configured\n# Create your first deployment to see the generated YAML';
     }
     
@@ -574,6 +595,9 @@ function App() {
 
   // Check if download should be enabled
   const hasValidDeployments = deployments.some(d => d.appName);
+
+  // Calculate total volume count for header
+  const totalVolumeCount = storageVolumes.length + persistentVolumeClaims.length;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -634,7 +658,7 @@ function App() {
                 </div>
                 <div className="flex items-center space-x-2 text-sm text-gray-600">
                   <HardDrive className="w-4 h-4" />
-                  <span>{storageVolumes.length + persistentVolumeClaims.length} volume{(storageVolumes.length + persistentVolumeClaims.length) !== 1 ? 's' : ''}</span>
+                  <span>{totalVolumeCount} volume{totalVolumeCount !== 1 ? 's' : ''}</span>
                 </div>
                 <SocialShare />
               </div>
@@ -697,7 +721,7 @@ function App() {
               </div>
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <HardDrive className="w-4 h-4" />
-                <span>{storageVolumes.length + persistentVolumeClaims.length}</span>
+                <span>{totalVolumeCount}</span>
               </div>
             </div>
             <SocialShare />
@@ -718,6 +742,7 @@ function App() {
         {/* Left Sidebar - Tabbed Interface */}
         <div className={`
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+          
           lg:translate-x-0 fixed lg:relative inset-y-0 left-0 z-50 lg:z-auto
           w-80 lg:w-1/4 xl:w-1/5 bg-white border-r border-gray-200 
           transition-transform duration-300 ease-in-out lg:transition-none
@@ -790,7 +815,7 @@ function App() {
                 onClick={() => setSidebarTab('volumes')}
                 className={`flex items-center justify-center space-x-1 px-2 py-2 rounded-md text-xs font-medium transition-all duration-200 col-span-2 ${
                   sidebarTab === 'volumes'
-                    ? 'bg-white text-indigo-600 shadow-sm'
+                    ? 'bg-white text-blue-600 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
@@ -919,7 +944,7 @@ function App() {
                       onClick={() => setVolumeSubTab('storage-volumes')}
                       className={`flex items-center justify-center space-x-1 px-2 py-2 rounded-md text-xs font-medium transition-all duration-200 ${
                         volumeSubTab === 'storage-volumes'
-                          ? 'bg-white text-indigo-600 shadow-sm'
+                          ? 'bg-white text-blue-600 shadow-sm'
                           : 'text-gray-600 hover:text-gray-900'
                       }`}
                     >
@@ -930,7 +955,7 @@ function App() {
                       onClick={() => setVolumeSubTab('pvcs')}
                       className={`flex items-center justify-center space-x-1 px-2 py-2 rounded-md text-xs font-medium transition-all duration-200 ${
                         volumeSubTab === 'pvcs'
-                          ? 'bg-white text-indigo-600 shadow-sm'
+                          ? 'bg-white text-purple-600 shadow-sm'
                           : 'text-gray-600 hover:text-gray-900'
                       }`}
                     >
@@ -938,11 +963,11 @@ function App() {
                       <span>PVCs</span>
                     </button>
                   </div>
-
+                  
                   {volumeSubTab === 'storage-volumes' ? (
                     <button
                       onClick={() => setShowStorageVolumeManager(true)}
-                      className="w-full inline-flex items-center justify-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-200 text-sm font-medium"
+                      className="w-full inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm font-medium"
                     >
                       <Plus className="w-4 h-4 mr-2" />
                       Create Volume
@@ -950,7 +975,7 @@ function App() {
                   ) : (
                     <button
                       onClick={() => setShowPVCManager(true)}
-                      className="w-full inline-flex items-center justify-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-200 text-sm font-medium"
+                      className="w-full inline-flex items-center justify-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200 text-sm font-medium"
                     >
                       <Plus className="w-4 h-4 mr-2" />
                       Create PVC
@@ -958,57 +983,30 @@ function App() {
                   )}
                 </div>
 
-                {/* Volume Content */}
                 {volumeSubTab === 'storage-volumes' ? (
-                  storageVolumes.length > 0 ? (
-                    <div className="p-4">
-                      <p className="text-sm text-gray-500 mb-4">Storage Volumes ({storageVolumes.length})</p>
-                      {/* Placeholder for StorageVolumesList component */}
-                      <div className="space-y-2">
-                        {storageVolumes.map((volume, index) => (
-                          <div key={volume.name} className="p-3 bg-gray-50 rounded-lg border">
-                            <div className="font-medium text-gray-900">{volume.name}</div>
-                            <div className="text-sm text-gray-500">{volume.type} • {volume.namespace}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="p-6 text-center">
-                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <HardDrive className="w-8 h-8 text-gray-400" />
-                      </div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No Storage Volumes</h3>
-                      <p className="text-sm text-gray-500 mb-4">
-                        Create storage volumes for your deployments
-                      </p>
-                    </div>
-                  )
+                  <StorageVolumesList
+                    storageVolumes={storageVolumes}
+                    selectedIndex={selectedStorageVolume}
+                    onSelect={(index) => {
+                      setSelectedStorageVolume(index);
+                      setSidebarOpen(false);
+                    }}
+                    onEdit={() => setShowStorageVolumeManager(true)}
+                    onDelete={handleDeleteStorageVolume}
+                    onDuplicate={handleDuplicateStorageVolume}
+                  />
                 ) : (
-                  persistentVolumeClaims.length > 0 ? (
-                    <div className="p-4">
-                      <p className="text-sm text-gray-500 mb-4">Persistent Volume Claims ({persistentVolumeClaims.length})</p>
-                      {/* Placeholder for PVCsList component */}
-                      <div className="space-y-2">
-                        {persistentVolumeClaims.map((pvc, index) => (
-                          <div key={pvc.name} className="p-3 bg-gray-50 rounded-lg border">
-                            <div className="font-medium text-gray-900">{pvc.name}</div>
-                            <div className="text-sm text-gray-500">{pvc.status.phase} • {pvc.namespace}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="p-6 text-center">
-                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Database className="w-8 h-8 text-gray-400" />
-                      </div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No PVCs</h3>
-                      <p className="text-sm text-gray-500 mb-4">
-                        Create Persistent Volume Claims for persistent storage
-                      </p>
-                    </div>
-                  )
+                  <PVCsList
+                    persistentVolumeClaims={persistentVolumeClaims}
+                    selectedIndex={selectedPVC}
+                    onSelect={(index) => {
+                      setSelectedPVC(index);
+                      setSidebarOpen(false);
+                    }}
+                    onEdit={() => setShowPVCManager(true)}
+                    onDelete={handleDeletePVC}
+                    onDuplicate={handleDuplicatePVC}
+                  />
                 )}
               </div>
             )}
@@ -1167,51 +1165,28 @@ function App() {
         />
       )}
 
-      {/* Placeholder modals for Storage Volume and PVC managers */}
+      {/* Storage Volume Manager Modal */}
       {showStorageVolumeManager && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-gray-900">Storage Volume Manager</h3>
-              <button
-                onClick={() => setShowStorageVolumeManager(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <p className="text-gray-600 mb-4">Storage Volume management interface will be implemented in Phase 2.</p>
-            <button
-              onClick={() => setShowStorageVolumeManager(false)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              Close
-            </button>
-          </div>
-        </div>
+        <StorageVolumeManager
+          storageVolumes={storageVolumes}
+          namespaces={availableNamespaces}
+          configMaps={availableConfigMapNames}
+          secrets={availableSecretNames}
+          onAddStorageVolume={handleAddStorageVolume}
+          onDeleteStorageVolume={handleDeleteStorageVolume}
+          onClose={() => setShowStorageVolumeManager(false)}
+        />
       )}
 
+      {/* PVC Manager Modal */}
       {showPVCManager && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-gray-900">PVC Manager</h3>
-              <button
-                onClick={() => setShowPVCManager(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <p className="text-gray-600 mb-4">Persistent Volume Claim management interface will be implemented in Phase 2.</p>
-            <button
-              onClick={() => setShowPVCManager(false)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              Close
-            </button>
-          </div>
-        </div>
+        <PVCManager
+          persistentVolumeClaims={persistentVolumeClaims}
+          namespaces={availableNamespaces}
+          onAddPVC={handleAddPVC}
+          onDeletePVC={handleDeletePVC}
+          onClose={() => setShowPVCManager(false)}
+        />
       )}
     </div>
   );
