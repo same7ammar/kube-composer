@@ -8,6 +8,13 @@ export interface EnvVar {
   };
 }
 
+export interface VolumeMount {
+  name: string;
+  mountPath: string;
+  readOnly?: boolean;
+  subPath?: string;
+}
+
 export interface Container {
   name: string;
   image: string;
@@ -17,7 +24,7 @@ export interface Container {
     requests: { cpu: string; memory: string };
     limits: { cpu: string; memory: string };
   };
-  volumeMounts: Array<{ name: string; mountPath: string }>;
+  volumeMounts: VolumeMount[];
 }
 
 export interface IngressRule {
@@ -66,6 +73,85 @@ export interface ProjectSettings {
   updatedAt: string;
 }
 
+// New Volume Management Types
+export type AccessMode = 'ReadWriteOnce' | 'ReadOnlyMany' | 'ReadWriteMany' | 'ReadWriteOncePod';
+export type VolumeMode = 'Filesystem' | 'Block';
+export type StorageVolumeType = 'emptyDir' | 'hostPath' | 'configMap' | 'secret' | 'persistentVolumeClaim';
+
+export interface StorageVolume {
+  name: string;
+  namespace: string;
+  type: StorageVolumeType;
+  labels: Record<string, string>;
+  annotations: Record<string, string>;
+  spec: {
+    // For emptyDir
+    emptyDir?: {
+      sizeLimit?: string;
+      medium?: 'Memory' | '';
+    };
+    // For hostPath
+    hostPath?: {
+      path: string;
+      type?: 'DirectoryOrCreate' | 'Directory' | 'FileOrCreate' | 'File' | 'Socket' | 'CharDevice' | 'BlockDevice';
+    };
+    // For configMap
+    configMap?: {
+      name: string;
+      defaultMode?: number;
+      optional?: boolean;
+    };
+    // For secret
+    secret?: {
+      secretName: string;
+      defaultMode?: number;
+      optional?: boolean;
+    };
+    // For PVC reference
+    persistentVolumeClaim?: {
+      claimName: string;
+    };
+  };
+  capacity?: string;
+  accessModes: AccessMode[];
+  storageClass?: string;
+  status: 'Available' | 'Bound' | 'Released' | 'Failed' | 'Pending';
+  createdAt: string;
+}
+
+export interface PersistentVolumeClaim {
+  name: string;
+  namespace: string;
+  labels: Record<string, string>;
+  annotations: Record<string, string>;
+  spec: {
+    accessModes: AccessMode[];
+    resources: {
+      requests: {
+        storage: string;
+      };
+    };
+    storageClassName?: string;
+    volumeMode?: VolumeMode;
+    selector?: {
+      matchLabels?: Record<string, string>;
+      matchExpressions?: Array<{
+        key: string;
+        operator: 'In' | 'NotIn' | 'Exists' | 'DoesNotExist';
+        values?: string[];
+      }>;
+    };
+  };
+  status: {
+    phase: 'Pending' | 'Bound' | 'Lost';
+    capacity?: {
+      storage: string;
+    };
+    accessModes?: AccessMode[];
+  };
+  createdAt: string;
+}
+
 export interface DeploymentConfig {
   appName: string;
   containers: Container[];
@@ -76,11 +162,19 @@ export interface DeploymentConfig {
   namespace: string;
   labels: Record<string, string>;
   annotations: Record<string, string>;
-  volumes: Array<{ name: string; mountPath: string; type: 'emptyDir' | 'configMap' | 'secret'; configMapName?: string; secretName?: string }>;
+  volumes: Array<{ 
+    name: string; 
+    mountPath: string; 
+    type: 'emptyDir' | 'configMap' | 'secret'; 
+    configMapName?: string; 
+    secretName?: string;
+  }>; // Legacy volumes for backward compatibility
   configMaps: Array<{ name: string; data: Record<string, string> }>; // Legacy - for backward compatibility
   secrets: Array<{ name: string; data: Record<string, string> }>; // Legacy - for backward compatibility
   selectedConfigMaps: string[]; // References to ConfigMap names
   selectedSecrets: string[]; // References to Secret names
+  selectedStorageVolumes: string[]; // References to StorageVolume names
+  selectedPVCs: string[]; // References to PVC names
   ingress: IngressConfig;
   // Legacy fields for backward compatibility
   image?: string;
