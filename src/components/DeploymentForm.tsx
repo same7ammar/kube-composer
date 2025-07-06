@@ -208,6 +208,22 @@ export function DeploymentForm({ config, onChange, availableNamespaces, availabl
     updateIngress({ annotations: newAnnotations });
   };
 
+  const updateIngressAnnotationKey = (oldKey: string, newKey: string) => {
+    const newAnnotations = { ...config.ingress.annotations };
+    if (oldKey !== newKey) {
+      const value = newAnnotations[oldKey];
+      delete newAnnotations[oldKey];
+      newAnnotations[newKey] = value;
+      updateIngress({ annotations: newAnnotations });
+    }
+  };
+
+  const updateIngressAnnotationValue = (key: string, value: string) => {
+    const newAnnotations = { ...config.ingress.annotations };
+    newAnnotations[key] = value;
+    updateIngress({ annotations: newAnnotations });
+  };
+
   const addIngressTLS = () => {
     updateIngress({
       tls: [...config.ingress.tls, {
@@ -965,19 +981,19 @@ export function DeploymentForm({ config, onChange, availableNamespaces, availabl
               
               {Object.entries(config.ingress.annotations).length > 0 && (
                 <div className="space-y-2">
-                  {Object.entries(config.ingress.annotations).map(([key, value]) => (
-                    <div key={key} className="flex items-center space-x-2">
+                  {Object.entries(config.ingress.annotations).map(([key, value], idx) => (
+                    <div key={idx} className="flex items-center space-x-2">
                       <input
                         type="text"
                         value={key}
-                        onChange={(e) => updateIngressAnnotation(key, e.target.value, value)}
+                        onChange={(e) => updateIngressAnnotationKey(key, e.target.value)}
                         className="flex-1 px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-transparent text-sm"
                         placeholder="nginx.ingress.kubernetes.io/rewrite-target"
                       />
                       <input
                         type="text"
                         value={value}
-                        onChange={(e) => updateIngressAnnotation(key, key, e.target.value)}
+                        onChange={(e) => updateIngressAnnotationValue(key, e.target.value)}
                         className="flex-1 px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-transparent text-sm"
                         placeholder="/"
                       />
