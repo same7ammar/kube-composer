@@ -199,15 +199,6 @@ export function DeploymentForm({ config, onChange, availableNamespaces, availabl
     updateIngress({ annotations: newAnnotations });
   };
 
-  const updateIngressAnnotation = (oldKey: string, newKey: string, value: string) => {
-    const newAnnotations = { ...config.ingress.annotations };
-    if (oldKey !== newKey) {
-      delete newAnnotations[oldKey];
-    }
-    newAnnotations[newKey] = value;
-    updateIngress({ annotations: newAnnotations });
-  };
-
   const updateIngressAnnotationKey = (oldKey: string, newKey: string) => {
     const newAnnotations = { ...config.ingress.annotations };
     if (oldKey !== newKey) {
