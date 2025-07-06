@@ -40,6 +40,8 @@ type PreviewMode = 'visual' | 'yaml' | 'summary' | 'argocd' | 'flow';
 type SidebarTab = 'deployments' | 'daemonsets' | 'namespaces' | 'storage' | 'jobs' | 'configmaps' | 'secrets';
 
 function App() {
+  const hideDemoIcons = import.meta.env.VITE_HIDE_DEMO_ICONS === 'true';
+  
   const [projectSettings, setProjectSettings] = useState<ProjectSettings>({
     name: 'my-project',
     description: '',
@@ -793,22 +795,26 @@ function App() {
                   <SocialShare />
                 </div>
                 <div className="flex flex-col space-y-2 w-full">
-                  <button
-                    onClick={() => setShowDockerPopup(true)}
-                    className="inline-flex items-center justify-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm font-medium w-full max-w-sm mx-auto"
-                    title="Run locally with Docker"
-                  >
-                    <Docker className="w-4 h-4 mr-1" />
-                    <span>Run Locally</span>
-                  </button>
-                  <button
-                    onClick={() => setShowYouTubePopup(true)}
-                    className="inline-flex items-center justify-center px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200 text-sm font-medium w-full max-w-sm mx-auto"
-                    title="Watch demo video"
-                  >
-                    <PlayCircle className="w-4 h-4 mr-1" />
-                    <span>Watch a Demo</span>
-                  </button>
+                  {!hideDemoIcons && (
+                    <>
+                      <button
+                        onClick={() => setShowDockerPopup(true)}
+                        className="inline-flex items-center justify-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm font-medium w-full max-w-sm mx-auto"
+                        title="Run locally with Docker"
+                      >
+                        <Docker className="w-4 h-4 mr-1" />
+                        <span>Run Locally</span>
+                      </button>
+                      <button
+                        onClick={() => setShowYouTubePopup(true)}
+                        className="inline-flex items-center justify-center px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200 text-sm font-medium w-full max-w-sm mx-auto"
+                        title="Watch demo video"
+                      >
+                        <PlayCircle className="w-4 h-4 mr-1" />
+                        <span>Watch a Demo</span>
+                      </button>
+                    </>
+                  )}
                   <button
                     onClick={handleDownload}
                     disabled={!hasValidDeployments}
@@ -824,22 +830,26 @@ function App() {
             {/* Desktop: SocialShare inline + actions inline */}
             <div className="hidden sm:flex flex-row items-center space-x-2">
               <SocialShare />
-              <button
-                onClick={() => setShowDockerPopup(true)}
-                className="inline-flex items-center justify-center px-2 sm:px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm font-medium"
-                title="Run locally with Docker"
-              >
-                <Docker className="w-4 h-4 mr-1" />
-                <span>Run Locally</span>
-              </button>
-              <button
-                onClick={() => setShowYouTubePopup(true)}
-                className="inline-flex items-center justify-center px-2 sm:px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200 text-sm font-medium"
-                title="Watch demo video"
-              >
-                <PlayCircle className="w-4 h-4 mr-1" />
-                <span>Watch a Demo</span>
-              </button>
+              {!hideDemoIcons && (
+                <>
+                  <button
+                    onClick={() => setShowDockerPopup(true)}
+                    className="inline-flex items-center justify-center px-2 sm:px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm font-medium"
+                    title="Run locally with Docker"
+                  >
+                    <Docker className="w-4 h-4 mr-1" />
+                    <span>Run Locally</span>
+                  </button>
+                  <button
+                    onClick={() => setShowYouTubePopup(true)}
+                    className="inline-flex items-center justify-center px-2 sm:px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200 text-sm font-medium"
+                    title="Watch demo video"
+                  >
+                    <PlayCircle className="w-4 h-4 mr-1" />
+                    <span>Watch a Demo</span>
+                  </button>
+                </>
+              )}
               <button
                 onClick={handleDownload}
                 disabled={!hasValidDeployments}

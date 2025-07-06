@@ -12,8 +12,8 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build the application
-RUN npm run build
+# Build the application with environment variable
+RUN VITE_HIDE_DEMO_ICONS=true npm run build
 
 # Production stage
 FROM nginx:alpine
