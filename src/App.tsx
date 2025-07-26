@@ -27,6 +27,11 @@ import { YouTubePopup } from './components/YouTubePopup';
 import { DockerRunPopup } from './components/DockerRunPopup';
 import { generateMultiDeploymentYaml } from './utils/yamlGenerator';
 import { JobManager, Job } from './components/JobManager';
+import { CrdManager } from './components/CrdManager';
+import { CrdList } from './components/CrdList';
+import { CrdYamlViewer } from './components/CrdYamlViewer';
+import { CustomResourceForm } from './components/CustomResourceForm';
+import { CustomResourceDefinition, CustomResource } from './types';
 import { JobList } from './components/jobs/JobList';
 import { CronJobList } from './components/jobs/CronJobList';
 import type { DeploymentConfig, DaemonSetConfig, Namespace, ConfigMap, Secret, ServiceAccount, ProjectSettings, JobConfig, CronJobConfig, KubernetesRole, KubernetesClusterRole, RoleBinding } from './types';
@@ -135,6 +140,31 @@ function App() {
   const [reopenRoleBindingAfterRole, setReopenRoleBindingAfterRole] = useState(false);
   const [selectedRoleBindingIndex, setSelectedRoleBindingIndex] = useState<number>(-1);
   const [deleteRoleBindingConfirm, setDeleteRoleBindingConfirm] = useState<number | null>(null);
+  
+  // CRD Management
+  const [crds, setCrds] = useState<CustomResourceDefinition[]>([]);
+  const [selectedCrd, setSelectedCrd] = useState<number>(0);
+  const [showCrdManager, setShowCrdManager] = useState(false);
+  const [crdToView, setCrdToView] = useState<CustomResourceDefinition | null>(null);
+  
+  // Custom Resources Management
+  const [customResources, setCustomResources] = useState<CustomResource[]>([]);
+  const [showCustomResourceForm, setShowCustomResourceForm] = useState<CustomResourceDefinition | null>(null);
+  
+  // Custom Resource handlers
+  const handleSaveCustomResource = (cr: CustomResource) => {
+    setCustomResources(prev => {
+      const existingIndex = prev.findIndex(existing => existing.id === cr.id);
+      if (existingIndex >= 0) {
+        const updated = [...prev];
+        updated[existingIndex] = cr;
+        return updated;
+      } else {
+        return [...prev, cr];
+      }
+    });
+    forceSave();
+  };
 
   // Auto-save functionality
   const autoSaveTimeoutRef = useRef<number | null>(null);
@@ -154,6 +184,8 @@ function App() {
         clusterRoles,
         namespaces,
         projectSettings,
+        crds,
+        customResources,
         generatedYaml
       };
       const success = saveConfig(config);
@@ -166,7 +198,7 @@ function App() {
       console.warn('Force save failed:', e);
       return false;
     }
-  }, [deployments, daemonSets, jobs, configMaps, secrets, serviceAccounts, roles, clusterRoles, namespaces, projectSettings, generatedYaml]);
+  }, [deployments, daemonSets, jobs, configMaps, secrets, serviceAccounts, roles, clusterRoles, namespaces, projectSettings, crds, generatedYaml]);
 
   // Auto-save function
   const autoSave = useCallback(() => {
@@ -187,8 +219,10 @@ function App() {
           clusterRoles,
           namespaces,
           projectSettings,
-          generatedYaml,
-          roleBindings
+                  generatedYaml,
+        roleBindings,
+        crds,
+        customResources
         };
         const success = saveConfig(config);
         if (success) {
@@ -198,7 +232,7 @@ function App() {
         console.warn('Auto-save failed:', e);
       }
     }, 3000); // 3 second delay
-  }, [deployments, daemonSets, jobs, configMaps, secrets, serviceAccounts, roles, clusterRoles, namespaces, projectSettings, generatedYaml, roleBindings]);
+  }, [deployments, daemonSets, jobs, configMaps, secrets, serviceAccounts, roles, clusterRoles, namespaces, projectSettings, generatedYaml, roleBindings, crds]);
 
   // Update generated YAML when configuration changes
   useEffect(() => {
@@ -220,7 +254,7 @@ function App() {
       const yaml = getPreviewYaml();
       setGeneratedYaml(yaml);
     }
-  }, [deployments, daemonSets, jobs, configMaps, secrets, serviceAccounts, roles, clusterRoles, namespaces, projectSettings, roleBindings]);
+  }, [deployments, daemonSets, jobs, configMaps, secrets, serviceAccounts, roles, clusterRoles, namespaces, projectSettings, roleBindings, crds]);
 
   // Trigger auto-save when any configuration changes
   useEffect(() => {
@@ -244,6 +278,7 @@ function App() {
         if (saved.jobs) setJobs(saved.jobs);
         if (saved.generatedYaml) setGeneratedYaml(saved.generatedYaml);
         if (saved.roleBindings) setRoleBindings(saved.roleBindings);
+        if (saved.crds) setCrds(saved.crds);
         console.log('Configuration loaded from localStorage');
       } else if (typeof window !== 'undefined' && window.location.search.includes('q=playground')) {
         setGeneratedYaml(`# Playground Mode\n# Example Deployment\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: playground-deployment\nspec:\n  replicas: 1\n  selector:\n    matchLabels:\n      app: playground\n  template:\n    metadata:\n      labels:\n        app: playground\n    spec:\n      containers:\n        - name: playground\n          image: nginx:latest\n`);
@@ -937,7 +972,8 @@ function App() {
       [],
       roles,
       clusterRoles,
-      roleBindings // Pass roleBindings here
+      roleBindings, // Pass roleBindings here
+      crds // Pass CRDs here
     );
     
     let finalYaml = yaml;
@@ -952,7 +988,9 @@ function App() {
       serviceAccounts.length === 0 &&
       roles.length === 0 &&
       clusterRoles.length === 0 &&
-      roleBindings.length === 0 // Add this check
+      roleBindings.length === 0 &&
+      crds.length === 0 &&
+      customResources.length === 0 // Add CRDs check
     ) {
       finalYaml = '# No resources configured\n# Create your first deployment, daemonset, job, service account, configmap, or secret to see the generated YAML';
     }
@@ -1820,6 +1858,38 @@ function App() {
                 />
               </div>
             )}
+            
+            {sidebarTab === 'crds' && (
+              <div className="space-y-4">
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                  <button
+                    onClick={() => setShowCrdManager(true)}
+                    className="w-full inline-flex items-center justify-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200 text-sm font-medium"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Import CRD
+                  </button>
+                </div>
+                <div className="px-4">
+                                    <CrdList
+                    crds={crds}
+                    selectedIndex={selectedCrd}
+                    onSelect={(index) => {
+                      setSelectedCrd(index);
+                      setSidebarOpen(false);
+                    }}
+                    onDelete={(index) => {
+                      const updatedCrds = [...crds];
+                      updatedCrds.splice(index, 1);
+                      setCrds(updatedCrds);
+                      forceSave();
+                    }}
+                    onViewYaml={(crd) => setCrdToView(crd)}
+                    onCreateResource={(crd) => setShowCustomResourceForm(crd)}
+                  />
+                </div>
+              </div>
+            )}
 
             {sidebarTab === 'storage' && (
               <>
@@ -1943,31 +2013,7 @@ function App() {
               </>
             )}
 
-            {sidebarTab === 'crds' && (
-              <div>
-                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                  <button
-                    onClick={() => {
-                      // Will be implemented in future
-                      alert('Custom Resource Definitions functionality will be available in a future update.');
-                    }}
-                    className="w-full inline-flex items-center justify-center px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors duration-200 text-sm font-medium"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Custom Resource Definition
-                  </button>
-                </div>
-                <div className="p-6 text-center">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <FileText className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Custom Resource Definitions</h3>
-                  <p className="text-sm text-gray-500 mb-4">
-                    CRDs allow you to extend Kubernetes with your own custom resources
-                  </p>
-                </div>
-              </div>
-            )}
+
 
             {sidebarTab === 'security' && (
               <>
@@ -2388,6 +2434,27 @@ function App() {
 
 
       {/* Service Account Manager Modal */}
+      
+      {/* CRD Manager Modal */}
+      {showCrdManager && (
+        <CrdManager
+          onAddCrd={(crd: CustomResourceDefinition) => {
+            setCrds([...crds, crd]);
+            forceSave();
+          }}
+          onClose={() => {
+            setShowCrdManager(false);
+          }}
+        />
+      )}
+      
+      {/* CRD YAML Viewer Modal */}
+      {crdToView && (
+        <CrdYamlViewer
+          crd={crdToView}
+          onClose={() => setCrdToView(null)}
+        />
+      )}
       {showServiceAccountManager && (
         <ServiceAccountManager
           serviceAccounts={serviceAccounts}
@@ -2626,6 +2693,7 @@ function App() {
                         setRoles([]);
                         setClusterRoles([]);
                         setRoleBindings([]);
+                        setCrds([]);
                         
                         console.log('Configuration cleared successfully');
                         alert('Configuration cleared successfully!');
@@ -2727,6 +2795,15 @@ function App() {
             </div>
           </div>
         </div>
+      )}
+      
+      {/* Custom Resource Form Modal */}
+      {showCustomResourceForm && (
+        <CustomResourceForm
+          crd={showCustomResourceForm}
+          onSave={handleSaveCustomResource}
+          onClose={() => setShowCustomResourceForm(null)}
+        />
       )}
     </div>
   );

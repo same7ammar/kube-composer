@@ -39,6 +39,7 @@ export interface KubeConfig {
   clusterRoles: KubernetesClusterRole[];
   roleBindings: RoleBinding[];
   namespaces: Namespace[];
+  crds: any[]; // CustomResourceDefinition array
   projectSettings: ProjectSettings;
   generatedYaml?: string;
   metadata: {
@@ -128,6 +129,7 @@ export function saveConfig(config: Partial<KubeConfig>): boolean {
       clusterRoles: config.clusterRoles || [],
       roleBindings: config.roleBindings || [],
       namespaces: config.namespaces || [],
+      crds: config.crds || [],
       projectSettings: config.projectSettings || {
         name: 'my-project',
         description: '',

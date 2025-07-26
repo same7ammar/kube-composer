@@ -302,3 +302,6 @@ export interface RoleBinding {
   };
   subjects: Subject[];
 }
+
+// Export CRD types
+export * from './crd';
