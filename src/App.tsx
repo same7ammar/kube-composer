@@ -25,12 +25,13 @@ import RoleWizardManager from './components/RoleWizardManager';
 import { ProjectSettingsManager } from './components/ProjectSettingsManager';
 import { YouTubePopup } from './components/YouTubePopup';
 import { DockerRunPopup } from './components/DockerRunPopup';
-import { generateMultiDeploymentYaml } from './utils/yamlGenerator';
+import { generateMultiDeploymentYaml, generateCustomResourceYaml } from './utils/yamlGenerator';
 import { JobManager, Job } from './components/JobManager';
 import { CrdManager } from './components/CrdManager';
 import { CrdList } from './components/CrdList';
 import { CrdYamlViewer } from './components/CrdYamlViewer';
 import { CustomResourceForm } from './components/CustomResourceForm';
+import { CustomResourcesList } from './components/CustomResourcesList';
 import { CustomResourceDefinition, CustomResource } from './types';
 import { JobList } from './components/jobs/JobList';
 import { CronJobList } from './components/jobs/CronJobList';
@@ -150,6 +151,9 @@ function App() {
   // Custom Resources Management
   const [customResources, setCustomResources] = useState<CustomResource[]>([]);
   const [showCustomResourceForm, setShowCustomResourceForm] = useState<CustomResourceDefinition | null>(null);
+  const [selectedCustomResource, setSelectedCustomResource] = useState<number>(-1);
+  const [editingCustomResource, setEditingCustomResource] = useState<CustomResource | null>(null);
+  const [customResourceToView, setCustomResourceToView] = useState<CustomResource | null>(null);
   
   // Custom Resource handlers
   const handleSaveCustomResource = (cr: CustomResource) => {
@@ -164,6 +168,25 @@ function App() {
       }
     });
     forceSave();
+  };
+
+  const handleDeleteCustomResource = (index: number) => {
+    const updated = [...customResources];
+    updated.splice(index, 1);
+    setCustomResources(updated);
+    forceSave();
+  };
+
+  const handleEditCustomResource = (cr: CustomResource) => {
+    const crd = crds.find(c => c.id === cr.crdId);
+    if (crd) {
+      setEditingCustomResource(cr);
+      setShowCustomResourceForm(crd);
+    }
+  };
+
+  const handleViewCustomResourceYaml = (cr: CustomResource) => {
+    setCustomResourceToView(cr);
   };
 
   // Auto-save functionality
@@ -973,7 +996,8 @@ function App() {
       roles,
       clusterRoles,
       roleBindings, // Pass roleBindings here
-      crds // Pass CRDs here
+      crds, // Pass CRDs here
+      customResources // Pass Custom Resources here
     );
     
     let finalYaml = yaml;
@@ -1871,7 +1895,7 @@ function App() {
                   </button>
                 </div>
                 <div className="px-4">
-                                    <CrdList
+                  <CrdList
                     crds={crds}
                     selectedIndex={selectedCrd}
                     onSelect={(index) => {
@@ -1887,6 +1911,29 @@ function App() {
                     onViewYaml={(crd) => setCrdToView(crd)}
                     onCreateResource={(crd) => setShowCustomResourceForm(crd)}
                   />
+                </div>
+                
+                {/* Custom Resources Section */}
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                  <div className="px-4 mb-3">
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Custom Resources
+                    </h3>
+                  </div>
+                  <div className="px-4">
+                    <CustomResourcesList
+                      customResources={customResources}
+                      crds={crds}
+                      selectedIndex={selectedCustomResource}
+                      onSelect={(index) => {
+                        setSelectedCustomResource(index);
+                        setSidebarOpen(false);
+                      }}
+                      onDelete={handleDeleteCustomResource}
+                      onEdit={handleEditCustomResource}
+                      onViewYaml={handleViewCustomResourceYaml}
+                    />
+                  </div>
                 </div>
               </div>
             )}
@@ -2304,8 +2351,8 @@ function App() {
               </div>
             </div>
             <div className="p-4 sm:p-6 pb-8">
-              {previewMode === 'flow' && <VisualPreview deployments={deployments} daemonSets={daemonSets} namespaces={namespaces} configMaps={configMaps} secrets={secrets} serviceAccounts={serviceAccounts} roles={roles} clusterRoles={clusterRoles} jobs={jobs} containerRef={containerRef} filterType={getFilterType()} roleBindings={roleBindings} />}
-              {previewMode === 'summary' && <ResourceSummary deployments={deployments} daemonSets={daemonSets} namespaces={namespaces} configMaps={configMaps} secrets={secrets} serviceAccounts={serviceAccounts} roles={roles} clusterRoles={clusterRoles} jobs={jobs} />}
+              {previewMode === 'flow' && <VisualPreview deployments={deployments} daemonSets={daemonSets} namespaces={namespaces} configMaps={configMaps} secrets={secrets} serviceAccounts={serviceAccounts} roles={roles} clusterRoles={clusterRoles} jobs={jobs} containerRef={containerRef} filterType={getFilterType()} roleBindings={roleBindings} customResources={customResources} crds={crds} />}
+              {previewMode === 'summary' && <ResourceSummary deployments={deployments} daemonSets={daemonSets} namespaces={namespaces} configMaps={configMaps} secrets={secrets} serviceAccounts={serviceAccounts} roles={roles} clusterRoles={clusterRoles} jobs={jobs} customResources={customResources} crds={crds} />}
               {previewMode === 'yaml' && <YamlPreview yaml={generatedYaml} />}
             </div>
           </div>
@@ -2801,9 +2848,42 @@ function App() {
       {showCustomResourceForm && (
         <CustomResourceForm
           crd={showCustomResourceForm}
+          existingCr={editingCustomResource || undefined}
           onSave={handleSaveCustomResource}
-          onClose={() => setShowCustomResourceForm(null)}
+          onClose={() => {
+            setShowCustomResourceForm(null);
+            setEditingCustomResource(null);
+          }}
         />
+      )}
+
+      {/* Custom Resource YAML Viewer Modal */}
+      {customResourceToView && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <div>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  Custom Resource YAML
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  {customResourceToView.kind} - {customResourceToView.name}
+                </p>
+              </div>
+              <button 
+                onClick={() => setCustomResourceToView(null)} 
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="flex-1 p-6 overflow-y-auto">
+              <YamlPreview yaml={generateCustomResourceYaml([customResourceToView], projectSettings)} />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
