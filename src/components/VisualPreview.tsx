@@ -38,7 +38,7 @@ interface VisualPreviewProps {
   jobs: Job[];
   roleBindings: RoleBinding[];
   containerRef?: React.RefObject<HTMLDivElement>;
-  filterType?: 'all' | 'deployments' | 'daemonsets' | 'namespaces' | 'configmaps' | 'secrets' | 'serviceaccounts' | 'roles' | 'clusterroles' | 'rolebindings' | 'jobs' | 'cronjobs';
+  filterType?: 'all' | 'deployments' | 'daemonsets' | 'namespaces' | 'configmaps' | 'secrets' | 'serviceaccounts' | 'roles' | 'clusterroles' | 'rolebindings' | 'jobs' | 'cronjobs' | 'crds';
 }
 
 interface FlowNode {
