@@ -21,7 +21,7 @@ import {
   Play,
   Link2
 } from 'lucide-react';
-import type { DeploymentConfig, DaemonSetConfig, Namespace, ConfigMap, Secret, ServiceAccount, KubernetesRole, KubernetesClusterRole, RoleBinding } from '../types';
+import type { DeploymentConfig, DaemonSetConfig, Namespace, ConfigMap, Secret, ServiceAccount, KubernetesRole, KubernetesClusterRole, RoleBinding, CustomResource, CustomResourceDefinition } from '../types';
 import type { Job } from './JobManager';
 import { generateKubernetesYaml, generateDaemonSetYaml, generateConfigMapYaml, generateSecretYaml, generateNamespaceYaml, generateServiceAccountYaml, generateJobYaml, generateCronJobYaml, generateRoleYaml, generateClusterRoleYaml } from '../utils/yamlGenerator';
 import { YamlPreview } from './YamlPreview';
@@ -37,8 +37,10 @@ interface VisualPreviewProps {
   clusterRoles: KubernetesClusterRole[];
   jobs: Job[];
   roleBindings: RoleBinding[];
+  customResources?: CustomResource[];
+  crds?: CustomResourceDefinition[];
   containerRef?: React.RefObject<HTMLDivElement>;
-  filterType?: 'all' | 'deployments' | 'daemonsets' | 'namespaces' | 'configmaps' | 'secrets' | 'serviceaccounts' | 'roles' | 'clusterroles' | 'rolebindings' | 'jobs' | 'cronjobs';
+  filterType?: 'all' | 'deployments' | 'daemonsets' | 'namespaces' | 'configmaps' | 'secrets' | 'serviceaccounts' | 'roles' | 'clusterroles' | 'rolebindings' | 'jobs' | 'cronjobs' | 'crds';
 }
 
 interface FlowNode {
@@ -83,6 +85,8 @@ export function VisualPreview({
   clusterRoles,
   jobs,
   roleBindings,
+  customResources = [],
+  crds = [],
   containerRef,
   filterType = 'all'
 }: VisualPreviewProps) {
@@ -1653,7 +1657,7 @@ export function VisualPreview({
   // Check if there are any resources for the current filter
   const hasFilteredResources = () => {
     if (filterType === 'all') {
-      return validDeployments.length > 0 || validDaemonSets.length > 0 || validServiceAccounts.length > 0 || validJobs.length > 0 || roles.length > 0 || clusterRoles.length > 0 || roleBindings.length > 0;
+      return validDeployments.length > 0 || validDaemonSets.length > 0 || validServiceAccounts.length > 0 || validJobs.length > 0 || roles.length > 0 || clusterRoles.length > 0 || roleBindings.length > 0 || crds.length > 0 || customResources.length > 0;
     } else if (filterType === 'deployments') {
       return validDeployments.length > 0;
     } else if (filterType === 'daemonsets') {
@@ -1676,6 +1680,8 @@ export function VisualPreview({
       return secrets.length > 0;
     } else if (filterType === 'namespaces') {
       return namespaces.length > 0;
+    } else if (filterType === 'crds') {
+      return crds.length > 0 || customResources.length > 0;
     }
     return false;
   };

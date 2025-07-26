@@ -25,8 +25,14 @@ import RoleWizardManager from './components/RoleWizardManager';
 import { ProjectSettingsManager } from './components/ProjectSettingsManager';
 import { YouTubePopup } from './components/YouTubePopup';
 import { DockerRunPopup } from './components/DockerRunPopup';
-import { generateMultiDeploymentYaml } from './utils/yamlGenerator';
+import { generateMultiDeploymentYaml, generateCustomResourceYaml } from './utils/yamlGenerator';
 import { JobManager, Job } from './components/JobManager';
+import { CrdManager } from './components/CrdManager';
+import { CrdList } from './components/CrdList';
+import { CrdYamlViewer } from './components/CrdYamlViewer';
+import { CustomResourceForm } from './components/CustomResourceForm';
+import { CustomResourcesList } from './components/CustomResourcesList';
+import { CustomResourceDefinition, CustomResource } from './types';
 import { JobList } from './components/jobs/JobList';
 import { CronJobList } from './components/jobs/CronJobList';
 import type { DeploymentConfig, DaemonSetConfig, Namespace, ConfigMap, Secret, ServiceAccount, ProjectSettings, JobConfig, CronJobConfig, KubernetesRole, KubernetesClusterRole, RoleBinding } from './types';
@@ -48,7 +54,18 @@ import { RoleBindingManager } from './components/RoleBindingManager';
 const isPlayground = typeof window !== 'undefined' && window.location.search.includes('q=playground');
 
 type PreviewMode = 'visual' | 'yaml' | 'summary' | 'argocd' | 'flow';
-type SidebarTab = 'deployments' | 'daemonsets' | 'namespaces' | 'storage' | 'security' | 'jobs' | 'configmaps' | 'secrets' | 'roles';
+type SidebarTab =
+  | 'deployments'
+  | 'daemonsets'
+  | 'namespaces'
+  | 'storage'
+  | 'security'
+  | 'jobs'
+  | 'configmaps'
+  | 'secrets'
+  | 'roles'
+  | 'advanced'
+  | 'crds';
 
 function App() {
   const hideDemoIcons = import.meta.env.VITE_HIDE_DEMO_ICONS === 'true';
@@ -112,7 +129,7 @@ function App() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showClearModal, setShowClearModal] = useState(false);
   // Only one group open at a time: 'workloads' | 'storage' | 'security' | null (all collapsed)
-  const [openGroup, setOpenGroup] = useState<'workloads' | 'storage' | 'security' | null>(null);
+  const [openGroup, setOpenGroup] = useState<'workloads' | 'storage' | 'security' | 'advanced' | null>(null);
   const [jobToEdit, setJobToEdit] = useState<Job | undefined>(undefined);
   const [selectedJob, setSelectedJob] = useState<number>(-1);
   const [selectedCronJob, setSelectedCronJob] = useState<number>(-1);
@@ -124,6 +141,53 @@ function App() {
   const [reopenRoleBindingAfterRole, setReopenRoleBindingAfterRole] = useState(false);
   const [selectedRoleBindingIndex, setSelectedRoleBindingIndex] = useState<number>(-1);
   const [deleteRoleBindingConfirm, setDeleteRoleBindingConfirm] = useState<number | null>(null);
+  
+  // CRD Management
+  const [crds, setCrds] = useState<CustomResourceDefinition[]>([]);
+  const [selectedCrd, setSelectedCrd] = useState<number>(0);
+  const [showCrdManager, setShowCrdManager] = useState(false);
+  const [crdToView, setCrdToView] = useState<CustomResourceDefinition | null>(null);
+  
+  // Custom Resources Management
+  const [customResources, setCustomResources] = useState<CustomResource[]>([]);
+  const [showCustomResourceForm, setShowCustomResourceForm] = useState<CustomResourceDefinition | null>(null);
+  const [selectedCustomResource, setSelectedCustomResource] = useState<number>(-1);
+  const [editingCustomResource, setEditingCustomResource] = useState<CustomResource | null>(null);
+  const [customResourceToView, setCustomResourceToView] = useState<CustomResource | null>(null);
+  
+  // Custom Resource handlers
+  const handleSaveCustomResource = (cr: CustomResource) => {
+    setCustomResources(prev => {
+      const existingIndex = prev.findIndex(existing => existing.id === cr.id);
+      if (existingIndex >= 0) {
+        const updated = [...prev];
+        updated[existingIndex] = cr;
+        return updated;
+      } else {
+        return [...prev, cr];
+      }
+    });
+    forceSave();
+  };
+
+  const handleDeleteCustomResource = (index: number) => {
+    const updated = [...customResources];
+    updated.splice(index, 1);
+    setCustomResources(updated);
+    forceSave();
+  };
+
+  const handleEditCustomResource = (cr: CustomResource) => {
+    const crd = crds.find(c => c.id === cr.crdId);
+    if (crd) {
+      setEditingCustomResource(cr);
+      setShowCustomResourceForm(crd);
+    }
+  };
+
+  const handleViewCustomResourceYaml = (cr: CustomResource) => {
+    setCustomResourceToView(cr);
+  };
 
   // Auto-save functionality
   const autoSaveTimeoutRef = useRef<number | null>(null);
@@ -143,6 +207,8 @@ function App() {
         clusterRoles,
         namespaces,
         projectSettings,
+        crds,
+        customResources,
         generatedYaml
       };
       const success = saveConfig(config);
@@ -155,7 +221,7 @@ function App() {
       console.warn('Force save failed:', e);
       return false;
     }
-  }, [deployments, daemonSets, jobs, configMaps, secrets, serviceAccounts, roles, clusterRoles, namespaces, projectSettings, generatedYaml]);
+  }, [deployments, daemonSets, jobs, configMaps, secrets, serviceAccounts, roles, clusterRoles, namespaces, projectSettings, crds, generatedYaml]);
 
   // Auto-save function
   const autoSave = useCallback(() => {
@@ -176,8 +242,10 @@ function App() {
           clusterRoles,
           namespaces,
           projectSettings,
-          generatedYaml,
-          roleBindings
+                  generatedYaml,
+        roleBindings,
+        crds,
+        customResources
         };
         const success = saveConfig(config);
         if (success) {
@@ -187,7 +255,7 @@ function App() {
         console.warn('Auto-save failed:', e);
       }
     }, 3000); // 3 second delay
-  }, [deployments, daemonSets, jobs, configMaps, secrets, serviceAccounts, roles, clusterRoles, namespaces, projectSettings, generatedYaml, roleBindings]);
+  }, [deployments, daemonSets, jobs, configMaps, secrets, serviceAccounts, roles, clusterRoles, namespaces, projectSettings, generatedYaml, roleBindings, crds]);
 
   // Update generated YAML when configuration changes
   useEffect(() => {
@@ -209,7 +277,7 @@ function App() {
       const yaml = getPreviewYaml();
       setGeneratedYaml(yaml);
     }
-  }, [deployments, daemonSets, jobs, configMaps, secrets, serviceAccounts, roles, clusterRoles, namespaces, projectSettings, roleBindings]);
+  }, [deployments, daemonSets, jobs, configMaps, secrets, serviceAccounts, roles, clusterRoles, namespaces, projectSettings, roleBindings, crds]);
 
   // Trigger auto-save when any configuration changes
   useEffect(() => {
@@ -233,6 +301,7 @@ function App() {
         if (saved.jobs) setJobs(saved.jobs);
         if (saved.generatedYaml) setGeneratedYaml(saved.generatedYaml);
         if (saved.roleBindings) setRoleBindings(saved.roleBindings);
+        if (saved.crds) setCrds(saved.crds);
         console.log('Configuration loaded from localStorage');
       } else if (typeof window !== 'undefined' && window.location.search.includes('q=playground')) {
         setGeneratedYaml(`# Playground Mode\n# Example Deployment\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: playground-deployment\nspec:\n  replicas: 1\n  selector:\n    matchLabels:\n      app: playground\n  template:\n    metadata:\n      labels:\n        app: playground\n    spec:\n      containers:\n        - name: playground\n          image: nginx:latest\n`);
@@ -926,7 +995,9 @@ function App() {
       [],
       roles,
       clusterRoles,
-      roleBindings // Pass roleBindings here
+      roleBindings, // Pass roleBindings here
+      crds, // Pass CRDs here
+      customResources // Pass Custom Resources here
     );
     
     let finalYaml = yaml;
@@ -941,7 +1012,9 @@ function App() {
       serviceAccounts.length === 0 &&
       roles.length === 0 &&
       clusterRoles.length === 0 &&
-      roleBindings.length === 0 // Add this check
+      roleBindings.length === 0 &&
+      crds.length === 0 &&
+      customResources.length === 0 // Add CRDs check
     ) {
       finalYaml = '# No resources configured\n# Create your first deployment, daemonset, job, service account, configmap, or secret to see the generated YAML';
     }
@@ -1003,7 +1076,7 @@ function App() {
   }
 
   // Function to determine filter type based on current sidebar tab and sub-tabs
-  const getFilterType = (): 'all' | 'deployments' | 'daemonsets' | 'namespaces' | 'configmaps' | 'secrets' | 'serviceaccounts' | 'roles' | 'rolebindings' | 'jobs' | 'cronjobs' => {
+  const getFilterType = (): 'all' | 'deployments' | 'daemonsets' | 'namespaces' | 'configmaps' | 'secrets' | 'serviceaccounts' | 'roles' | 'rolebindings' | 'jobs' | 'cronjobs' | 'crds' => {
     // Show all resources when showAllResources is true
     if (showAllResources) return 'all';
     
@@ -1011,6 +1084,7 @@ function App() {
     if (sidebarTab === 'deployments') return 'deployments';
     if (sidebarTab === 'daemonsets') return 'daemonsets';
     if (sidebarTab === 'namespaces') return 'namespaces';
+    if (sidebarTab === 'crds') return 'crds';
     if (sidebarTab === 'jobs') {
       if (jobsSubTab === 'jobs') return 'jobs';
       if (jobsSubTab === 'cronjobs') return 'cronjobs';
@@ -1047,7 +1121,6 @@ function App() {
       setSecuritySubTab('roles');
     } else if (subTab === 'rolebindings') {
       setSecuritySubTab('rolebindings');
-
     } else if (subTab === 'jobs') {
       setJobsSubTab('jobs');
     } else if (subTab === 'cronjobs') {
@@ -1208,6 +1281,43 @@ function App() {
                 ) : (
                   <Menu className="w-5 h-5" />
                 )}
+            {/* Advanced Group */}
+            <button
+              className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-semibold text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200"
+              onClick={() => {
+                if (openGroup === 'advanced') { setOpenGroup(null); } else { setOpenGroup('advanced'); setSidebarTab('advanced'); }
+              }}
+              aria-expanded={openGroup === 'advanced'}
+            >
+              <span className="flex items-center gap-2">
+                <span className="mr-2">
+                  {/* Gear Icon (Heroicons Outline Cog) */}
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 2.25c.414-1.036 1.586-1.036 2 0l.286.716a1.125 1.125 0 001.418.642l.734-.244c1.07-.355 2.07.645 1.715 1.715l-.244.734a1.125 1.125 0 00.642 1.418l.716.286c1.036.414 1.036 1.586 0 2l-.716.286a1.125 1.125 0 00-.642 1.418l.244.734c.355 1.07-.645 2.07-1.715 1.715l-.734-.244a1.125 1.125 0 00-1.418.642l-.286.716c-.414 1.036-1.586 1.036-2 0l-.286-.716a1.125 1.125 0 00-1.418-.642l-.734.244c-1.07.355-2.07-.645-1.715-1.715l.244-.734a1.125 1.125 0 00-.642-1.418l-.716-.286c-1.036-.414-1.036-1.586 0-2l.716-.286a1.125 1.125 0 00.642-1.418l-.244-.734c-.355-1.07.645-2.07 1.715-1.715l.734.244a1.125 1.125 0 001.418-.642l.286-.716z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                </span>
+                Advanced
+              </span>
+              <span>{openGroup === 'advanced' ? '▾' : '▸'}</span>
+            </button>
+            {openGroup === 'advanced' && (
+              <div className="pl-6 space-y-1">
+                <button
+                  onClick={() => handleMenuClick('advanced', 'crds')}
+                  className={`flex items-center w-full px-2 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
+                    sidebarTab === 'crds' ? 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300 shadow-sm border border-gray-200 dark:border-gray-800' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100/50 dark:hover:bg-gray-900/10 hover:text-gray-600 dark:hover:text-gray-300'
+                  }`}
+                >
+                  {/* CRDs icon (Document icon) */}
+                  <svg xmlns="http://www.w3.org/2000/svg" className="mr-3 flex-shrink-0 h-6 w-6 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3A2.25 2.25 0 004.5 5.25v13.5A2.25 2.25 0 006.75 21h10.5A2.25 2.25 0 0019.5 18.75V8.25a2.25 2.25 0 00-2.25-2.25h-6.75a.75.75 0 01-.75-.75V3z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 3v4.5a.75.75 0 00.75.75h6.75" />
+                  </svg>
+                  CRDs
+                </button>
+              </div>
+            )}
               </button>
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                 <FileText className="w-5 h-5 text-white" />
@@ -1633,6 +1743,43 @@ function App() {
 
               </div>
             )}
+            
+            {/* Advanced Group */}
+            <button
+              className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-semibold text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200"
+              onClick={() => {
+                if (openGroup === 'advanced') {
+                  setOpenGroup(null);
+                } else {
+                  setOpenGroup('advanced');
+                  setSidebarTab('crds'); // Set tab to CRDs when opening Advanced
+                }
+              }}
+              aria-expanded={openGroup === 'advanced'}
+            >
+              <span className="flex items-center gap-2">
+                <Settings className="w-4 h-4 text-blue-600" />
+                Advanced
+              </span>
+              <span>{openGroup === 'advanced' ? '▾' : '▸'}</span>
+            </button>
+            {openGroup === 'advanced' && (
+              <div className="pl-6 space-y-1">
+                <button
+                  onClick={() => handleMenuClick('crds')}
+                  className={`flex items-center w-full px-2 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
+                    sidebarTab === 'crds' 
+                      ? 'bg-teal-50 text-teal-700 dark:bg-teal-900/20 dark:text-teal-300 shadow-sm border border-teal-100 dark:border-teal-800' 
+                      : 'text-gray-700 dark:text-gray-200 hover:bg-teal-50/50 dark:hover:bg-teal-900/10 hover:text-teal-600 dark:hover:text-teal-300'
+                  }`}
+                >
+                  <FileText className={`mr-3 flex-shrink-0 h-6 w-6 ${
+                    sidebarTab === 'crds' ? 'text-teal-600 dark:text-teal-400' : 'text-gray-500 dark:text-gray-400'
+                  }`} />
+                  CRDs
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Tab Content */}
@@ -1733,6 +1880,61 @@ function App() {
                   onDelete={handleDeleteNamespace}
                   onDuplicate={handleDuplicateNamespace}
                 />
+              </div>
+            )}
+            
+            {sidebarTab === 'crds' && (
+              <div className="space-y-4">
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                  <button
+                    onClick={() => setShowCrdManager(true)}
+                    className="w-full inline-flex items-center justify-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200 text-sm font-medium"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Import CRD
+                  </button>
+                </div>
+                <div className="px-4">
+                  <CrdList
+                    crds={crds}
+                    selectedIndex={selectedCrd}
+                    onSelect={(index) => {
+                      setSelectedCrd(index);
+                      setSidebarOpen(false);
+                    }}
+                    onDelete={(index) => {
+                      const updatedCrds = [...crds];
+                      updatedCrds.splice(index, 1);
+                      setCrds(updatedCrds);
+                      forceSave();
+                    }}
+                    onViewYaml={(crd) => setCrdToView(crd)}
+                    onCreateResource={(crd) => setShowCustomResourceForm(crd)}
+                  />
+                </div>
+                
+                {/* Custom Resources Section */}
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                  <div className="px-4 mb-3">
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Custom Resources
+                    </h3>
+                  </div>
+                  <div className="px-4">
+                    <CustomResourcesList
+                      customResources={customResources}
+                      crds={crds}
+                      selectedIndex={selectedCustomResource}
+                      onSelect={(index) => {
+                        setSelectedCustomResource(index);
+                        setSidebarOpen(false);
+                      }}
+                      onDelete={handleDeleteCustomResource}
+                      onEdit={handleEditCustomResource}
+                      onViewYaml={handleViewCustomResourceYaml}
+                    />
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1857,6 +2059,8 @@ function App() {
                 )}
               </>
             )}
+
+
 
             {sidebarTab === 'security' && (
               <>
@@ -2147,8 +2351,8 @@ function App() {
               </div>
             </div>
             <div className="p-4 sm:p-6 pb-8">
-              {previewMode === 'flow' && <VisualPreview deployments={deployments} daemonSets={daemonSets} namespaces={namespaces} configMaps={configMaps} secrets={secrets} serviceAccounts={serviceAccounts} roles={roles} clusterRoles={clusterRoles} jobs={jobs} containerRef={containerRef} filterType={getFilterType()} roleBindings={roleBindings} />}
-              {previewMode === 'summary' && <ResourceSummary deployments={deployments} daemonSets={daemonSets} namespaces={namespaces} configMaps={configMaps} secrets={secrets} serviceAccounts={serviceAccounts} roles={roles} clusterRoles={clusterRoles} jobs={jobs} />}
+              {previewMode === 'flow' && <VisualPreview deployments={deployments} daemonSets={daemonSets} namespaces={namespaces} configMaps={configMaps} secrets={secrets} serviceAccounts={serviceAccounts} roles={roles} clusterRoles={clusterRoles} jobs={jobs} containerRef={containerRef} filterType={getFilterType()} roleBindings={roleBindings} customResources={customResources} crds={crds} />}
+              {previewMode === 'summary' && <ResourceSummary deployments={deployments} daemonSets={daemonSets} namespaces={namespaces} configMaps={configMaps} secrets={secrets} serviceAccounts={serviceAccounts} roles={roles} clusterRoles={clusterRoles} jobs={jobs} customResources={customResources} crds={crds} />}
               {previewMode === 'yaml' && <YamlPreview yaml={generatedYaml} />}
             </div>
           </div>
@@ -2277,6 +2481,27 @@ function App() {
 
 
       {/* Service Account Manager Modal */}
+      
+      {/* CRD Manager Modal */}
+      {showCrdManager && (
+        <CrdManager
+          onAddCrd={(crd: CustomResourceDefinition) => {
+            setCrds([...crds, crd]);
+            forceSave();
+          }}
+          onClose={() => {
+            setShowCrdManager(false);
+          }}
+        />
+      )}
+      
+      {/* CRD YAML Viewer Modal */}
+      {crdToView && (
+        <CrdYamlViewer
+          crd={crdToView}
+          onClose={() => setCrdToView(null)}
+        />
+      )}
       {showServiceAccountManager && (
         <ServiceAccountManager
           serviceAccounts={serviceAccounts}
@@ -2515,6 +2740,7 @@ function App() {
                         setRoles([]);
                         setClusterRoles([]);
                         setRoleBindings([]);
+                        setCrds([]);
                         
                         console.log('Configuration cleared successfully');
                         alert('Configuration cleared successfully!');
@@ -2613,6 +2839,48 @@ function App() {
                 onSubmit={editingRoleBindingIndex !== undefined ? (binding: RoleBinding) => handleUpdateRoleBinding(binding, editingRoleBindingIndex) : handleAddRoleBinding}
                 onCancel={() => { setShowRoleBindingManager(false); setEditingRoleBindingIndex(undefined); }}
               />
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Custom Resource Form Modal */}
+      {showCustomResourceForm && (
+        <CustomResourceForm
+          crd={showCustomResourceForm}
+          existingCr={editingCustomResource || undefined}
+          onSave={handleSaveCustomResource}
+          onClose={() => {
+            setShowCustomResourceForm(null);
+            setEditingCustomResource(null);
+          }}
+        />
+      )}
+
+      {/* Custom Resource YAML Viewer Modal */}
+      {customResourceToView && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <div>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  Custom Resource YAML
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  {customResourceToView.kind} - {customResourceToView.name}
+                </p>
+              </div>
+              <button 
+                onClick={() => setCustomResourceToView(null)} 
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="flex-1 p-6 overflow-y-auto">
+              <YamlPreview yaml={generateCustomResourceYaml([customResourceToView], projectSettings)} />
             </div>
           </div>
         </div>

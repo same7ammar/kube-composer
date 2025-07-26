@@ -1,5 +1,5 @@
-import { Server, CheckCircle, AlertCircle, Users, Settings, Key, Play, Clock } from 'lucide-react';
-import type { DeploymentConfig, DaemonSetConfig, Namespace, ConfigMap, Secret, ServiceAccount, KubernetesRole, KubernetesClusterRole } from '../types';
+import { Server, CheckCircle, AlertCircle, Users, Settings, Key, Play, Clock, FileText } from 'lucide-react';
+import type { DeploymentConfig, DaemonSetConfig, Namespace, ConfigMap, Secret, ServiceAccount, KubernetesRole, KubernetesClusterRole, CustomResource, CustomResourceDefinition } from '../types';
 import type { Job } from './JobManager';
 
 interface ResourceSummaryProps {
@@ -12,6 +12,8 @@ interface ResourceSummaryProps {
   roles: KubernetesRole[];
   clusterRoles: KubernetesClusterRole[];
   jobs: Job[];
+  customResources: CustomResource[];
+  crds: CustomResourceDefinition[];
 }
 
 export function ResourceSummary({ 
@@ -23,7 +25,9 @@ export function ResourceSummary({
   serviceAccounts,
   roles,
   clusterRoles,
-  jobs
+  jobs,
+  customResources,
+  crds
 }: ResourceSummaryProps) {
   const getTotalResourceCount = () => {
     let count = 0;
@@ -52,6 +56,8 @@ export function ResourceSummary({
     count += jobs.length;
     count += roles.length;
     count += clusterRoles.length;
+    count += customResources.length;
+    count += crds.length;
     
     return count;
   };
@@ -145,6 +151,13 @@ export function ResourceSummary({
         });
       }
     });
+
+    // Check custom resources
+    customResources.forEach((cr, index) => {
+      if (!cr.name) issues.push(`Custom Resource ${index + 1}: Name is required`);
+      if (!cr.kind) issues.push(`Custom Resource ${index + 1}: Kind is required`);
+      if (!cr.apiVersion) issues.push(`Custom Resource ${index + 1}: API Version is required`);
+    });
     
     return {
       isValid: issues.length === 0,
@@ -160,6 +173,7 @@ export function ResourceSummary({
   const validJobs = jobs.filter(job => job.name);
   const validRoles = roles.filter(role => role.metadata.name);
   const validClusterRoles = clusterRoles.filter(clusterRole => clusterRole.metadata.name);
+  const validCustomResources = customResources.filter(cr => cr.name);
 
   return (
     <div className="space-y-6">
@@ -233,6 +247,19 @@ export function ResourceSummary({
             <div>ConfigMaps: {configMaps.length}</div>
             <div>Namespaces: {namespaces.length}</div>
             <div>Total Data Keys: {configMaps.reduce((sum, cm) => sum + Object.keys(cm.data).length, 0)}</div>
+          </div>
+        </div>
+
+        {/* Custom Resources */}
+        <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+          <div className="flex items-center space-x-2 mb-2">
+            <FileText className="w-5 h-5 text-purple-600" />
+            <span className="font-medium text-purple-900">Custom Resources</span>
+          </div>
+          <div className="text-sm text-purple-700 space-y-1">
+            <div>CRDs: {crds.length}</div>
+            <div>Custom Resources: {validCustomResources.length}</div>
+            <div>Total CRs: {validCustomResources.length}</div>
           </div>
         </div>
       </div>
@@ -439,6 +466,33 @@ export function ResourceSummary({
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Custom Resources Summary */}
+      {validCustomResources.length > 0 && (
+        <div className="space-y-4">
+          <h4 className="font-medium text-gray-900">Custom Resources</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {validCustomResources.map((cr, index) => {
+              const crd = crds.find(c => c.id === cr.crdId);
+              return (
+                <div key={index} className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <FileText className="w-5 h-5 text-purple-600" />
+                    <span className="font-medium text-purple-900">{cr.name}</span>
+                  </div>
+                  <div className="text-sm text-purple-700 space-y-1">
+                    <div>Kind: {cr.kind}</div>
+                    <div>API Version: {cr.apiVersion}</div>
+                    {cr.namespace && <div>Namespace: {cr.namespace}</div>}
+                    {crd && <div>CRD: {crd.name}</div>}
+                    <div>Created: {new Date(cr.createdAt).toLocaleDateString()}</div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
