@@ -41,8 +41,14 @@ import { ServiceAccountManager } from './components/ServiceAccountManager';
 import { SocialShare } from './components/SocialShare';
 import { VisualPreview } from './components/VisualPreview';
 import { YouTubePopup } from './components/YouTubePopup';
+import { PersistentVolumeManager } from './components/PersistentVolumeManager';
+import { PersistentVolumeList } from './components/PersistentVolumeList';
+import { PersistentVolumeClaimManager } from './components/PersistentVolumeClaimManager';
+import { PersistentVolumeClaimList } from './components/PersistentVolumeClaimList';
+import { StorageClassManager } from './components/StorageClassManager';
+import { StorageClassList } from './components/StorageClassList';
 import useTheme from './hooks/useTheme';
-import type { ConfigMap, CronJobConfig, DaemonSetConfig, DeploymentConfig, JobConfig, KubernetesClusterRole, KubernetesRole, Namespace, ProjectSettings, RoleBinding, Secret, ServiceAccount } from './types';
+import type { ConfigMap, CronJobConfig, DaemonSetConfig, DeploymentConfig, JobConfig, KubernetesClusterRole, KubernetesRole, Namespace, PersistentVolume, PersistentVolumeClaim, ProjectSettings, RoleBinding, Secret, ServiceAccount, StorageClass } from './types';
 import { generateMultiDeploymentYaml } from './utils/yamlGenerator';
 
 // Move this outside the component to avoid breaking the Rules of Hooks
@@ -80,6 +86,9 @@ function App() {
   const [roles, setRoles] = useState<KubernetesRole[]>([]);
   const [clusterRoles, setClusterRoles] = useState<KubernetesClusterRole[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [persistentVolumes, setPersistentVolumes] = useState<PersistentVolume[]>([]);
+  const [persistentVolumeClaims, setPersistentVolumeClaims] = useState<PersistentVolumeClaim[]>([]);
+  const [storageClasses, setStorageClasses] = useState<StorageClass[]>([]);
   const [selectedDeployment, setSelectedDeployment] = useState<number>(0);
   const [selectedDaemonSet, setSelectedDaemonSet] = useState<number>(0);
   const [selectedNamespace, setSelectedNamespace] = useState<number>(0);
@@ -87,11 +96,14 @@ function App() {
   const [selectedSecret, setSelectedSecret] = useState<number>(0);
   const [selectedServiceAccount, setSelectedServiceAccount] = useState<number>(0);
   const [selectedRole, setSelectedRole] = useState<number>(0);
+  const [selectedPV, setSelectedPV] = useState<number>(0);
+  const [selectedPVC, setSelectedPVC] = useState<number>(0);
+  const [selectedSC, setSelectedSC] = useState<number>(0);
 
   const [previewMode, setPreviewMode] = useState<PreviewMode>(isPlayground ? 'yaml' : 'flow');
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('deployments');
   const [showAllResources, setShowAllResources] = useState<boolean>(true); // Show all resources by default
-  const [storageSubTab, setStorageSubTab] = useState<'configmaps' | 'secrets'>('configmaps');
+  const [storageSubTab, setStorageSubTab] = useState<'configmaps' | 'secrets' | 'pv' | 'pvc' | 'storageclass'>('configmaps');
   const [securitySubTab, setSecuritySubTab] = useState<'serviceaccounts' | 'roles' | 'rolebindings'>('serviceaccounts');
   const [jobsSubTab, setJobsSubTab] = useState<'jobs' | 'cronjobs'>('jobs');
   const [showForm, setShowForm] = useState(false);
@@ -121,6 +133,12 @@ function App() {
   const [roleBindings, setRoleBindings] = useState<RoleBinding[]>([]);
   const [showRoleBindingManager, setShowRoleBindingManager] = useState(false);
   const [editingRoleBindingIndex, setEditingRoleBindingIndex] = useState<number | undefined>(undefined);
+  const [showPVManager, setShowPVManager] = useState(false);
+  const [editingPVIndex, setEditingPVIndex] = useState<number | undefined>(undefined);
+  const [showPVCManager, setShowPVCManager] = useState(false);
+  const [editingPVCIndex, setEditingPVCIndex] = useState<number | undefined>(undefined);
+  const [showSCManager, setShowSCManager] = useState(false);
+  const [editingSCIndex, setEditingSCIndex] = useState<number | undefined>(undefined);
   // Add a state to track if RoleManager was opened from RoleBindingManager
   const [reopenRoleBindingAfterRole, setReopenRoleBindingAfterRole] = useState(false);
   const [selectedRoleBindingIndex, setSelectedRoleBindingIndex] = useState<number>(-1);
@@ -147,7 +165,10 @@ function App() {
         clusterRoles,
         namespaces,
         projectSettings,
-        generatedYaml
+        generatedYaml,
+        persistentVolumes,
+        persistentVolumeClaims,
+        storageClasses
       };
       const success = saveConfig(config);
       if (success) {
@@ -159,7 +180,7 @@ function App() {
       console.warn('Force save failed:', e);
       return false;
     }
-  }, [deployments, daemonSets, jobs, configMaps, secrets, serviceAccounts, roles, clusterRoles, namespaces, projectSettings, generatedYaml]);
+  }, [deployments, daemonSets, jobs, configMaps, secrets, serviceAccounts, roles, clusterRoles, namespaces, projectSettings, generatedYaml, persistentVolumes, persistentVolumeClaims, storageClasses]);
 
   // Auto-save function
   const autoSave = useCallback(() => {
@@ -181,7 +202,10 @@ function App() {
           namespaces,
           projectSettings,
           generatedYaml,
-          roleBindings
+          roleBindings,
+          persistentVolumes,
+          persistentVolumeClaims,
+          storageClasses
         };
         const success = saveConfig(config);
         if (success) {
@@ -191,7 +215,7 @@ function App() {
         console.warn('Auto-save failed:', e);
       }
     }, 3000); // 3 second delay
-  }, [deployments, daemonSets, jobs, configMaps, secrets, serviceAccounts, roles, clusterRoles, namespaces, projectSettings, generatedYaml, roleBindings]);
+  }, [deployments, daemonSets, jobs, configMaps, secrets, serviceAccounts, roles, clusterRoles, namespaces, projectSettings, generatedYaml, roleBindings, persistentVolumes, persistentVolumeClaims, storageClasses]);
 
   // Update generated YAML when configuration changes
   useEffect(() => {
@@ -213,7 +237,7 @@ function App() {
       const yaml = getPreviewYaml();
       setGeneratedYaml(yaml);
     }
-  }, [deployments, daemonSets, jobs, configMaps, secrets, serviceAccounts, roles, clusterRoles, namespaces, projectSettings, roleBindings]);
+  }, [deployments, daemonSets, jobs, configMaps, secrets, serviceAccounts, roles, clusterRoles, namespaces, projectSettings, roleBindings, persistentVolumes, persistentVolumeClaims, storageClasses]);
 
   // Trigger auto-save when any configuration changes
   useEffect(() => {
@@ -237,6 +261,9 @@ function App() {
         if (saved.jobs) setJobs(saved.jobs);
         if (saved.generatedYaml) setGeneratedYaml(saved.generatedYaml);
         if (saved.roleBindings) setRoleBindings(saved.roleBindings);
+        if (saved.persistentVolumes) setPersistentVolumes(saved.persistentVolumes);
+        if (saved.persistentVolumeClaims) setPersistentVolumeClaims(saved.persistentVolumeClaims);
+        if (saved.storageClasses) setStorageClasses(saved.storageClasses);
         console.log('Configuration loaded from localStorage');
       } else if (typeof window !== 'undefined' && window.location.search.includes('q=playground')) {
         setGeneratedYaml(`# Playground Mode\n# Example Deployment\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: playground-deployment\nspec:\n  replicas: 1\n  selector:\n    matchLabels:\n      app: playground\n  template:\n    metadata:\n      labels:\n        app: playground\n    spec:\n      containers:\n        - name: playground\n          image: nginx:latest\n`);
@@ -892,7 +919,7 @@ function App() {
       return;
     }
     
-    const yaml = generateMultiDeploymentYaml(validDeployments, namespaces, configMaps, secrets, projectSettings);
+    const yaml = generateMultiDeploymentYaml(validDeployments, namespaces, configMaps, secrets, projectSettings, [], [], [], [], [], [], [], [], persistentVolumes, persistentVolumeClaims, storageClasses);
     const blob = new Blob([yaml], { type: 'text/yaml' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -930,7 +957,10 @@ function App() {
       [],
       roles,
       clusterRoles,
-      roleBindings // Pass roleBindings here
+      roleBindings,
+      persistentVolumes,
+      persistentVolumeClaims,
+      storageClasses
     );
     
     let finalYaml = yaml;
@@ -945,9 +975,12 @@ function App() {
       serviceAccounts.length === 0 &&
       roles.length === 0 &&
       clusterRoles.length === 0 &&
-      roleBindings.length === 0 // Add this check
+      roleBindings.length === 0 &&
+      persistentVolumes.length === 0 &&
+      persistentVolumeClaims.length === 0 &&
+      storageClasses.length === 0
     ) {
-      finalYaml = '# No resources configured\n# Create your first deployment, daemonset, job, service account, configmap, or secret to see the generated YAML';
+      finalYaml = '# No resources configured\n# Create your first deployment, daemonset, job, service account, configmap, secret, or storage resource to see the generated YAML';
     }
     
     return finalYaml;
@@ -1007,7 +1040,7 @@ function App() {
   }
 
   // Function to determine filter type based on current sidebar tab and sub-tabs
-  const getFilterType = (): 'all' | 'deployments' | 'daemonsets' | 'namespaces' | 'configmaps' | 'secrets' | 'serviceaccounts' | 'roles' | 'rolebindings' | 'jobs' | 'cronjobs' => {
+  const getFilterType = (): 'all' | 'deployments' | 'daemonsets' | 'namespaces' | 'configmaps' | 'secrets' | 'serviceaccounts' | 'roles' | 'rolebindings' | 'jobs' | 'cronjobs' | 'pv' | 'pvc' | 'storageclass' => {
     // Show all resources when showAllResources is true
     if (showAllResources) return 'all';
     
@@ -1023,6 +1056,9 @@ function App() {
     if (sidebarTab === 'storage') {
       if (storageSubTab === 'configmaps') return 'configmaps';
       if (storageSubTab === 'secrets') return 'secrets';
+      if (storageSubTab === 'pv') return 'pv';
+      if (storageSubTab === 'pvc') return 'pvc';
+      if (storageSubTab === 'storageclass') return 'storageclass';
       return 'configmaps'; // default
     }
     if (sidebarTab === 'security') {
@@ -1045,6 +1081,12 @@ function App() {
       setStorageSubTab('configmaps');
     } else if (subTab === 'secrets') {
       setStorageSubTab('secrets');
+    } else if (subTab === 'pv') {
+      setStorageSubTab('pv');
+    } else if (subTab === 'pvc') {
+      setStorageSubTab('pvc');
+    } else if (subTab === 'storageclass') {
+      setStorageSubTab('storageclass');
     } else if (subTab === 'serviceaccounts') {
       setSecuritySubTab('serviceaccounts');
     } else if (subTab === 'roles') {
@@ -1543,28 +1585,45 @@ function App() {
                   Secrets
                 </button>
 
-                {/* Add back the disabled storage items */}
                 <button
-                  disabled
-                  className="flex items-center w-full px-2 py-2 text-sm font-medium rounded-md text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50"
+                  onClick={() => handleMenuClick('storage', 'pv')}
+                  className={`flex items-center w-full px-2 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
+                    sidebarTab === 'storage' && storageSubTab === 'pv'
+                      ? 'bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300 shadow-sm border border-purple-100 dark:border-purple-800' 
+                      : 'text-gray-700 dark:text-gray-200 hover:bg-purple-50/50 dark:hover:bg-purple-900/10 hover:text-purple-600 dark:hover:text-purple-300'
+                  }`}
                 >
-                  <K8sStorageIcon className="mr-3 flex-shrink-0 h-6 w-6 text-gray-400 dark:text-gray-600" />
+                  <K8sStorageIcon className={`mr-3 flex-shrink-0 h-6 w-6 ${
+                    sidebarTab === 'storage' && storageSubTab === 'pv' ? 'text-purple-600 dark:text-purple-400' : 'text-gray-500 dark:text-gray-400'
+                  }`} />
                   PersistentVolumes
                 </button>
 
                 <button
-                  disabled
-                  className="flex items-center w-full px-2 py-2 text-sm font-medium rounded-md text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50"
+                  onClick={() => handleMenuClick('storage', 'pvc')}
+                  className={`flex items-center w-full px-2 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
+                    sidebarTab === 'storage' && storageSubTab === 'pvc'
+                      ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 shadow-sm border border-blue-100 dark:border-blue-800' 
+                      : 'text-gray-700 dark:text-gray-200 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 hover:text-blue-600 dark:hover:text-blue-300'
+                  }`}
                 >
-                  <K8sStorageIcon className="mr-3 flex-shrink-0 h-6 w-6 text-gray-400 dark:text-gray-600" />
+                  <K8sStorageIcon className={`mr-3 flex-shrink-0 h-6 w-6 ${
+                    sidebarTab === 'storage' && storageSubTab === 'pvc' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'
+                  }`} />
                   PersistentVolumeClaims
                 </button>
 
                 <button
-                  disabled
-                  className="flex items-center w-full px-2 py-2 text-sm font-medium rounded-md text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50"
+                  onClick={() => handleMenuClick('storage', 'storageclass')}
+                  className={`flex items-center w-full px-2 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
+                    sidebarTab === 'storage' && storageSubTab === 'storageclass'
+                      ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300 shadow-sm border border-indigo-100 dark:border-indigo-800' 
+                      : 'text-gray-700 dark:text-gray-200 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 hover:text-indigo-600 dark:hover:text-indigo-300'
+                  }`}
                 >
-                  <K8sStorageIcon className="mr-3 flex-shrink-0 h-6 w-6 text-gray-400 dark:text-gray-600" />
+                  <K8sStorageIcon className={`mr-3 flex-shrink-0 h-6 w-6 ${
+                    sidebarTab === 'storage' && storageSubTab === 'storageclass' ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400'
+                  }`} />
                   StorageClasses
                 </button>
               </div>
@@ -1793,6 +1852,96 @@ function App() {
                       }}
                       onDelete={handleDeleteSecret}
                       onDuplicate={handleDuplicateSecret}
+                    />
+                  </>
+                )}
+                {storageSubTab === 'pv' && (
+                  <>
+                    <div className="p-4 border-b border-gray-200">
+                      <button
+                        onClick={() => setShowPVManager(true)}
+                        className="w-full inline-flex items-center justify-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200 text-sm font-medium"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add PersistentVolume
+                      </button>
+                    </div>
+                    <PersistentVolumeList
+                      persistentVolumes={persistentVolumes}
+                      selectedIndex={selectedPV}
+                      onSelect={(index) => {
+                        setSelectedPV(index);
+                        setSidebarOpen(false);
+                      }}
+                      onEdit={(index) => {
+                        setEditingPVIndex(index);
+                        setShowPVManager(true);
+                      }}
+                      onDelete={(pvName) => setPersistentVolumes(persistentVolumes.filter(pv => pv.name !== pvName))}
+                      onDuplicate={(index) => {
+                        const pv = persistentVolumes[index];
+                        setPersistentVolumes([...persistentVolumes, { ...pv, name: `${pv.name}-copy`, createdAt: new Date().toISOString() }]);
+                      }}
+                    />
+                  </>
+                )}
+                {storageSubTab === 'pvc' && (
+                  <>
+                    <div className="p-4 border-b border-gray-200">
+                      <button
+                        onClick={() => setShowPVCManager(true)}
+                        className="w-full inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm font-medium"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add PersistentVolumeClaim
+                      </button>
+                    </div>
+                    <PersistentVolumeClaimList
+                      persistentVolumeClaims={persistentVolumeClaims}
+                      selectedIndex={selectedPVC}
+                      onSelect={(index) => {
+                        setSelectedPVC(index);
+                        setSidebarOpen(false);
+                      }}
+                      onEdit={(index) => {
+                        setEditingPVCIndex(index);
+                        setShowPVCManager(true);
+                      }}
+                      onDelete={(pvcName) => setPersistentVolumeClaims(persistentVolumeClaims.filter(pvc => pvc.name !== pvcName))}
+                      onDuplicate={(index) => {
+                        const pvc = persistentVolumeClaims[index];
+                        setPersistentVolumeClaims([...persistentVolumeClaims, { ...pvc, name: `${pvc.name}-copy`, createdAt: new Date().toISOString() }]);
+                      }}
+                    />
+                  </>
+                )}
+                {storageSubTab === 'storageclass' && (
+                  <>
+                    <div className="p-4 border-b border-gray-200">
+                      <button
+                        onClick={() => setShowSCManager(true)}
+                        className="w-full inline-flex items-center justify-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-200 text-sm font-medium"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add StorageClass
+                      </button>
+                    </div>
+                    <StorageClassList
+                      storageClasses={storageClasses}
+                      selectedIndex={selectedSC}
+                      onSelect={(index) => {
+                        setSelectedSC(index);
+                        setSidebarOpen(false);
+                      }}
+                      onEdit={(index) => {
+                        setEditingSCIndex(index);
+                        setShowSCManager(true);
+                      }}
+                      onDelete={(scName) => setStorageClasses(storageClasses.filter(sc => sc.name !== scName))}
+                      onDuplicate={(index) => {
+                        const sc = storageClasses[index];
+                        setStorageClasses([...storageClasses, { ...sc, name: `${sc.name}-copy`, createdAt: new Date().toISOString() }]);
+                      }}
                     />
                   </>
                 )}
@@ -2125,6 +2274,11 @@ function App() {
                       <span className="font-bold">{jobs.filter(j => j.type === 'job' || j.type === 'cronjob').length}</span>
                       <span className="text-gray-500 dark:text-gray-300">job{jobs.filter(j => j.type === 'job' || j.type === 'cronjob').length !== 1 ? 's' : ''}</span>
                     </div>
+                    <div className="flex items-center space-x-1 text-sm text-gray-700 font-medium dark:text-gray-200">
+                      <Database className="w-5 h-5 text-teal-500" />
+                      <span className="font-bold">{persistentVolumes.length + persistentVolumeClaims.length + storageClasses.length}</span>
+                      <span className="text-gray-500 dark:text-gray-300">storage</span>
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center justify-between sm:justify-end">
@@ -2151,8 +2305,8 @@ function App() {
               </div>
             </div>
             <div className="p-4 sm:p-6 pb-8 ">
-              {previewMode === 'flow' && <VisualPreview deployments={deployments} daemonSets={daemonSets} namespaces={namespaces} configMaps={configMaps} secrets={secrets} serviceAccounts={serviceAccounts} roles={roles} clusterRoles={clusterRoles} jobs={jobs} containerRef={containerRef} filterType={getFilterType()} roleBindings={roleBindings} />}
-              {previewMode === 'summary' && <ResourceSummary deployments={deployments} daemonSets={daemonSets} namespaces={namespaces} configMaps={configMaps} secrets={secrets} serviceAccounts={serviceAccounts} roles={roles} clusterRoles={clusterRoles} jobs={jobs} />}
+              {previewMode === 'flow' && <VisualPreview deployments={deployments} daemonSets={daemonSets} namespaces={namespaces} configMaps={configMaps} secrets={secrets} serviceAccounts={serviceAccounts} roles={roles} clusterRoles={clusterRoles} jobs={jobs} containerRef={containerRef} filterType={getFilterType()} roleBindings={roleBindings} persistentVolumes={persistentVolumes} persistentVolumeClaims={persistentVolumeClaims} storageClasses={storageClasses} />}
+              {previewMode === 'summary' && <ResourceSummary deployments={deployments} daemonSets={daemonSets} namespaces={namespaces} configMaps={configMaps} secrets={secrets} serviceAccounts={serviceAccounts} roles={roles} clusterRoles={clusterRoles} jobs={jobs} persistentVolumes={persistentVolumes} persistentVolumeClaims={persistentVolumeClaims} storageClasses={storageClasses} />}
               {previewMode === 'yaml' && <YamlPreview yaml={generatedYaml} />}
             </div>
           </div>
@@ -2314,6 +2468,62 @@ function App() {
           initialJob={jobToEdit}
           availableConfigMaps={configMaps}
           availableSecrets={secrets}
+        />
+      )}
+
+      {/* PersistentVolume Manager Modal */}
+      {showPVManager && (
+        <PersistentVolumeManager
+          persistentVolumes={persistentVolumes}
+          editingPV={editingPVIndex !== undefined ? persistentVolumes[editingPVIndex] : undefined}
+          onAddPV={(pv) => setPersistentVolumes([...persistentVolumes, pv])}
+          onUpdatePV={(oldName, pv) => {
+            setPersistentVolumes(persistentVolumes.map(p => p.name === oldName ? pv : p));
+          }}
+          onDeletePV={(pvName) => setPersistentVolumes(persistentVolumes.filter(pv => pv.name !== pvName))}
+          onClose={() => {
+            setShowPVManager(false);
+            setEditingPVIndex(undefined);
+          }}
+        />
+      )}
+
+      {/* PersistentVolumeClaim Manager Modal */}
+      {showPVCManager && (
+        <PersistentVolumeClaimManager
+          persistentVolumeClaims={persistentVolumeClaims}
+          namespaces={availableNamespaces}
+          persistentVolumes={persistentVolumes}
+          storageClasses={storageClasses}
+          editingPVC={editingPVCIndex !== undefined ? persistentVolumeClaims[editingPVCIndex] : undefined}
+          onAddPVC={(pvc) => setPersistentVolumeClaims([...persistentVolumeClaims, pvc])}
+          onUpdatePVC={(oldName, oldNamespace, pvc) => {
+            setPersistentVolumeClaims(persistentVolumeClaims.map(p => 
+              (p.name === oldName && p.namespace === oldNamespace) ? pvc : p
+            ));
+          }}
+          onDeletePVC={(pvcName) => setPersistentVolumeClaims(persistentVolumeClaims.filter(pvc => pvc.name !== pvcName))}
+          onClose={() => {
+            setShowPVCManager(false);
+            setEditingPVCIndex(undefined);
+          }}
+        />
+      )}
+
+      {/* StorageClass Manager Modal */}
+      {showSCManager && (
+        <StorageClassManager
+          storageClasses={storageClasses}
+          editingSC={editingSCIndex !== undefined ? storageClasses[editingSCIndex] : undefined}
+          onAddSC={(sc) => setStorageClasses([...storageClasses, sc])}
+          onUpdateSC={(oldName, sc) => {
+            setStorageClasses(storageClasses.map(s => s.name === oldName ? sc : s));
+          }}
+          onDeleteSC={(scName) => setStorageClasses(storageClasses.filter(sc => sc.name !== scName))}
+          onClose={() => {
+            setShowSCManager(false);
+            setEditingSCIndex(undefined);
+          }}
         />
       )}
 

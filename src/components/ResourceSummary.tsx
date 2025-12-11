@@ -1,5 +1,5 @@
 import { Server, CheckCircle, AlertCircle, Users, Settings, Key, Play, Clock } from 'lucide-react';
-import type { DeploymentConfig, DaemonSetConfig, Namespace, ConfigMap, Secret, ServiceAccount, KubernetesRole, KubernetesClusterRole } from '../types';
+import type { DeploymentConfig, DaemonSetConfig, Namespace, ConfigMap, Secret, ServiceAccount, KubernetesRole, KubernetesClusterRole, PersistentVolume, PersistentVolumeClaim, StorageClass } from '../types';
 import type { Job } from './JobManager';
 
 interface ResourceSummaryProps {
@@ -12,6 +12,9 @@ interface ResourceSummaryProps {
   roles: KubernetesRole[];
   clusterRoles: KubernetesClusterRole[];
   jobs: Job[];
+  persistentVolumes: PersistentVolume[];
+  persistentVolumeClaims: PersistentVolumeClaim[];
+  storageClasses: StorageClass[];
 }
 
 export function ResourceSummary({ 
@@ -23,7 +26,10 @@ export function ResourceSummary({
   serviceAccounts,
   roles,
   clusterRoles,
-  jobs
+  jobs,
+  persistentVolumes,
+  persistentVolumeClaims,
+  storageClasses
 }: ResourceSummaryProps) {
   const getTotalResourceCount = () => {
     let count = 0;
@@ -52,6 +58,9 @@ export function ResourceSummary({
     count += jobs.length;
     count += roles.length;
     count += clusterRoles.length;
+    count += persistentVolumes.length;
+    count += persistentVolumeClaims.length;
+    count += storageClasses.length;
     
     return count;
   };
@@ -231,36 +240,13 @@ export function ResourceSummary({
           </div>
           <div className="text-sm text-green-700 space-y-1 dark:text-green-300">
             <div>ConfigMaps: {configMaps.length}</div>
+            <div>PersistentVolumes: {persistentVolumes.length}</div>
+            <div>PersistentVolumeClaims: {persistentVolumeClaims.length}</div>
+            <div>StorageClasses: {storageClasses.length}</div>
             <div>Namespaces: {namespaces.length}</div>
-            <div>Total Data Keys: {configMaps.reduce((sum, cm) => sum + Object.keys(cm.data).length, 0)}</div>
           </div>
         </div>
       </div>
-
-      {/* Service Accounts Summary */}
-      {validServiceAccounts.length > 0 && (
-        <div className="space-y-4">
-          <h4 className="font-medium text-gray-900 dark:text-gray-100">Service Accounts</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {validServiceAccounts.map((serviceAccount, index) => (
-              <div key={index} className="bg-cyan-50 dark:bg-cyan-900 p-4 rounded-lg border border-cyan-200 dark:border-cyan-700 text-cyan-800 dark:text-cyan-100">
-                <div className="flex items-center space-x-2 mb-2">
-                  <Users className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
-                  <span className="font-medium text-cyan-900 dark:text-cyan-100">{serviceAccount.name}</span>
-                </div>
-                <div className="text-sm text-cyan-700 space-y-1 dark:text-cyan-300">
-                  <div>Namespace: {serviceAccount.namespace}</div>
-                  <div>Secrets: {serviceAccount.secrets?.length || 0}</div>
-                  <div>Image Pull Secrets: {serviceAccount.imagePullSecrets?.length || 0}</div>
-                  {serviceAccount.automountServiceAccountToken !== undefined && (
-                    <div>Auto-mount: {serviceAccount.automountServiceAccountToken ? 'Enabled' : 'Disabled'}</div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Jobs Summary */}
       {validJobs.length > 0 && (
@@ -344,32 +330,6 @@ export function ResourceSummary({
                   <div>API Groups: {Array.from(new Set(clusterRole.rules?.flatMap(r => r.apiGroups || []).map(g => g || 'core') || [])).length}</div>
                   <div>Resources: {Array.from(new Set(clusterRole.rules?.flatMap(r => r.resources || []) || [])).length}</div>
                   <div>Verbs: {Array.from(new Set(clusterRole.rules?.flatMap(r => r.verbs || []) || [])).length}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Deployments Summary */}
-      {validDeployments.length > 0 && (
-        <div className="space-y-4">
-          <h4 className="font-medium text-gray-900 dark:text-gray-100">Deployments</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {validDeployments.map((deployment, index) => (
-              <div key={index} className="bg-blue-50 dark:bg-blue-900 p-4 rounded-lg border border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-100">
-                <div className="flex items-center space-x-2 mb-2">
-                  <Server className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                  <span className="font-medium text-blue-900 dark:text-blue-100">{deployment.appName}</span>
-                </div>
-                <div className="text-sm text-blue-700 space-y-1 dark:text-blue-300">
-                  <div>Namespace: {deployment.namespace}</div>
-                  <div>Replicas: {deployment.replicas}</div>
-                  <div>Containers: {deployment.containers?.length || 0}</div>
-                  <div>Port: {deployment.port} → {deployment.targetPort}</div>
-                  {deployment.ingress?.enabled && (
-                    <div>Ingress: Enabled ({deployment.ingress.rules.length} rules)</div>
-                  )}
                 </div>
               </div>
             ))}

@@ -20,7 +20,18 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    host: true
+    host: true,
+    allowedHosts: [
+      '.manus-asia.computer',
+      '5173-i0h1gv67smt7w6iyos7kj-5563ba97.manus-asia.computer',
+      'localhost',
+      '.localhost'
+    ]
+  },
+  preview: {
+    port: 8080,
+    host: true,
+    strictPort: false
   },
   resolve: {
     extensions: ['.js', '.ts', '.jsx', '.tsx']

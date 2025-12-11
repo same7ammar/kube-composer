@@ -1,4 +1,4 @@
-import type { DeploymentConfig, DaemonSetConfig, Namespace, ConfigMap, Secret, ServiceAccount, ProjectSettings, DockerHubSecret, KubernetesRole, KubernetesClusterRole, RoleBinding } from '../types';
+import type { DeploymentConfig, DaemonSetConfig, Namespace, ConfigMap, Secret, ServiceAccount, ProjectSettings, DockerHubSecret, KubernetesRole, KubernetesClusterRole, RoleBinding, PersistentVolume, PersistentVolumeClaim, StorageClass } from '../types';
 
 // Job interface from JobManager component
 export interface Job {
@@ -40,6 +40,9 @@ export interface KubeConfig {
   roleBindings: RoleBinding[];
   namespaces: Namespace[];
   projectSettings: ProjectSettings;
+  persistentVolumes: PersistentVolume[];
+  persistentVolumeClaims: PersistentVolumeClaim[];
+  storageClasses: StorageClass[];
   generatedYaml?: string;
   metadata: {
     lastSaved: number;
@@ -135,6 +138,9 @@ export function saveConfig(config: Partial<KubeConfig>): boolean {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       },
+      persistentVolumes: config.persistentVolumes || [],
+      persistentVolumeClaims: config.persistentVolumeClaims || [],
+      storageClasses: config.storageClasses || [],
       generatedYaml: config.generatedYaml || '',
       metadata: {
         lastSaved: Date.now(),
