@@ -307,3 +307,92 @@ export type ThemeContextProps = {
     isDarkModeEnabled: boolean;
     toggleDarkModeHandler: () => void;
 }
+
+// Storage Types
+export interface PersistentVolume {
+  name: string;
+  labels: Record<string, string>;
+  annotations: Record<string, string>;
+  capacity: string; // e.g., "10Gi"
+  accessModes: Array<'ReadWriteOnce' | 'ReadOnlyMany' | 'ReadWriteMany'>;
+  persistentVolumeReclaimPolicy: 'Retain' | 'Recycle' | 'Delete';
+  storageClassName?: string;
+  volumeMode: 'Filesystem' | 'Block';
+  volumeSource: {
+    type: 'hostPath' | 'nfs' | 'local' | 'csi';
+    // hostPath configuration
+    hostPath?: {
+      path: string;
+      type?: 'Directory' | 'DirectoryOrCreate' | 'File' | 'FileOrCreate';
+    };
+    // NFS configuration
+    nfs?: {
+      server: string;
+      path: string;
+      readOnly?: boolean;
+    };
+    // Local configuration
+    local?: {
+      path: string;
+    };
+    // CSI configuration
+    csi?: {
+      driver: string;
+      volumeHandle: string;
+      fsType?: string;
+      volumeAttributes?: Record<string, string>;
+    };
+  };
+  nodeAffinity?: {
+    required?: {
+      nodeSelectorTerms: Array<{
+        matchExpressions: Array<{
+          key: string;
+          operator: 'In' | 'NotIn' | 'Exists' | 'DoesNotExist' | 'Gt' | 'Lt';
+          values?: string[];
+        }>;
+      }>;
+    };
+  };
+  createdAt: string;
+}
+
+export interface PersistentVolumeClaim {
+  name: string;
+  namespace: string;
+  labels: Record<string, string>;
+  annotations: Record<string, string>;
+  accessModes: Array<'ReadWriteOnce' | 'ReadOnlyMany' | 'ReadWriteMany'>;
+  storageRequest: string; // e.g., "5Gi"
+  storageClassName?: string;
+  volumeName?: string; // For binding to specific PV
+  volumeMode?: 'Filesystem' | 'Block';
+  selector?: {
+    matchLabels?: Record<string, string>;
+    matchExpressions?: Array<{
+      key: string;
+      operator: 'In' | 'NotIn' | 'Exists' | 'DoesNotExist';
+      values?: string[];
+    }>;
+  };
+  createdAt: string;
+}
+
+export interface StorageClass {
+  name: string;
+  labels: Record<string, string>;
+  annotations: Record<string, string>;
+  provisioner: string; // e.g., "kubernetes.io/aws-ebs", "kubernetes.io/gce-pd"
+  parameters: Record<string, string>; // Provisioner-specific parameters
+  reclaimPolicy: 'Retain' | 'Delete';
+  volumeBindingMode: 'Immediate' | 'WaitForFirstConsumer';
+  allowVolumeExpansion: boolean;
+  mountOptions?: string[];
+  allowedTopologies?: Array<{
+    matchLabelExpressions: Array<{
+      key: string;
+      values: string[];
+    }>;
+  }>;
+  createdAt: string;
+}

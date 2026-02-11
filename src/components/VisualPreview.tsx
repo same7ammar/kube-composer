@@ -21,9 +21,9 @@ import {
   Play,
   Link2
 } from 'lucide-react';
-import type { DeploymentConfig, DaemonSetConfig, Namespace, ConfigMap, Secret, ServiceAccount, KubernetesRole, KubernetesClusterRole, RoleBinding } from '../types';
+import type { DeploymentConfig, DaemonSetConfig, Namespace, ConfigMap, Secret, ServiceAccount, KubernetesRole, KubernetesClusterRole, RoleBinding, PersistentVolume, PersistentVolumeClaim, StorageClass } from '../types';
 import type { Job } from './JobManager';
-import { generateKubernetesYaml, generateDaemonSetYaml, generateConfigMapYaml, generateSecretYaml, generateNamespaceYaml, generateServiceAccountYaml, generateJobYaml, generateCronJobYaml, generateRoleYaml, generateClusterRoleYaml } from '../utils/yamlGenerator';
+import { generateKubernetesYaml, generateDaemonSetYaml, generateConfigMapYaml, generateSecretYaml, generateNamespaceYaml, generateServiceAccountYaml, generateJobYaml, generateCronJobYaml, generateRoleYaml, generateClusterRoleYaml, generatePersistentVolumeYaml, generatePersistentVolumeClaimYaml, generateStorageClassYaml } from '../utils/yamlGenerator';
 import { YamlPreview } from './YamlPreview';
 
 interface VisualPreviewProps {
@@ -37,14 +37,17 @@ interface VisualPreviewProps {
   clusterRoles: KubernetesClusterRole[];
   jobs: Job[];
   roleBindings: RoleBinding[];
+  persistentVolumes: PersistentVolume[];
+  persistentVolumeClaims: PersistentVolumeClaim[];
+  storageClasses: StorageClass[];
   containerRef?: React.RefObject<HTMLDivElement>;
-  filterType?: 'all' | 'deployments' | 'daemonsets' | 'namespaces' | 'configmaps' | 'secrets' | 'serviceaccounts' | 'roles' | 'clusterroles' | 'rolebindings' | 'jobs' | 'cronjobs';
+  filterType?: 'all' | 'deployments' | 'daemonsets' | 'namespaces' | 'configmaps' | 'secrets' | 'serviceaccounts' | 'roles' | 'clusterroles' | 'rolebindings' | 'jobs' | 'cronjobs' | 'pv' | 'pvc' | 'storageclass';
 }
 
 interface FlowNode {
   id: string;
   name: string;
-  type: 'deployment' | 'daemonset' | 'service' | 'pod' | 'configmap' | 'secret' | 'ingress' | 'namespace' | 'external' | 'serviceaccount' | 'role' | 'job' | 'cronjob' | 'rolebinding';
+  type: 'deployment' | 'daemonset' | 'service' | 'pod' | 'configmap' | 'secret' | 'ingress' | 'namespace' | 'external' | 'serviceaccount' | 'role' | 'job' | 'cronjob' | 'rolebinding' | 'persistentvolume' | 'persistentvolumeclaim' | 'storageclass';
   namespace: string;
   status: 'healthy' | 'warning' | 'error' | 'pending' | 'syncing';
   syncStatus: 'synced' | 'outofsync' | 'unknown';
@@ -68,6 +71,12 @@ interface FlowNode {
     apiGroups?: string[];
     resources?: string[];
     verbs?: string[];
+    capacity?: string;
+    storage?: string;
+    storageClass?: string;
+    provisioner?: string;
+    reclaimPolicy?: string;
+    volumeName?: string;
   };
   colorClass?: string;
 }
@@ -83,6 +92,9 @@ export function VisualPreview({
   clusterRoles,
   jobs,
   roleBindings,
+  persistentVolumes,
+  persistentVolumeClaims,
+  storageClasses,
   containerRef,
   filterType = 'all'
 }: VisualPreviewProps) {
@@ -121,6 +133,9 @@ export function VisualPreview({
     const filteredClusterRoles = filterType === 'all' || filterType === 'clusterroles' ? clusterRoles : [];
     const filteredJobs = filterType === 'all' || filterType === 'jobs' || filterType === 'cronjobs' ? jobs : [];
     const filteredRoleBindings = filterType === 'all' || filterType === 'rolebindings' ? roleBindings : [];
+    const filteredPVs = filterType === 'all' || filterType === 'pv' ? persistentVolumes : [];
+    const filteredPVCs = filterType === 'all' || filterType === 'pvc' ? persistentVolumeClaims : [];
+    const filteredSCs = filterType === 'all' || filterType === 'storageclass' ? storageClasses : [];
 
     // Group by namespace
     const namespaceGroups = filteredNamespaces.map(ns => ({
@@ -131,7 +146,8 @@ export function VisualPreview({
       secrets: filteredSecrets.filter(s => s.namespace === ns.name),
       serviceAccounts: filteredServiceAccounts.filter(sa => sa.namespace === ns.name),
       roles: filteredRoles.filter(r => r.metadata.namespace === ns.name),
-      roleBindings: filteredRoleBindings.filter(rb => !rb.isClusterRoleBinding && rb.namespace === ns.name)
+      roleBindings: filteredRoleBindings.filter(rb => !rb.isClusterRoleBinding && rb.namespace === ns.name),
+      persistentVolumeClaims: filteredPVCs.filter(pvc => pvc.namespace === ns.name)
     })).filter(group => 
       group.deployments.length > 0 || 
       group.daemonSets.length > 0 ||
@@ -140,6 +156,7 @@ export function VisualPreview({
       group.serviceAccounts.length > 0 ||
       group.roles.length > 0 ||
       group.roleBindings.length > 0 ||
+      group.persistentVolumeClaims.length > 0 ||
       (filterType === 'namespaces' && group.namespace)
     );
 
@@ -683,6 +700,8 @@ export function VisualPreview({
         const totalJobRows = Math.ceil(filteredNamespaceJobs.length / jobsPerRow);
         currentY += totalJobRows * 100 + 40; // Compact job spacing
       }
+
+      // PVCs will be shown in the unified storage section below
 
       currentY += rowHeight * 0.2;
     });
@@ -1380,8 +1399,122 @@ export function VisualPreview({
       currentY += totalRows * 200 + 40;
     }
 
+    // ===== UNIFIED STORAGE VISUALIZATION SECTION =====
+    // Show StorageClass → PV → PVC hierarchy in one section
+    const hasStorageResources = filteredSCs.length > 0 || filteredPVs.length > 0 || filteredPVCs.length > 0;
+    if ((filterType === 'all' || filterType === 'pv' || filterType === 'pvc' || filterType === 'storageclass') && hasStorageResources) {
+      currentY += 60; // Add spacing before storage section
+      const resourcesPerRow = 3;
+      const resourceSpacing = 300;
+      
+      // 1. StorageClasses at the top
+      if (filteredSCs.length > 0) {
+        filteredSCs.forEach((sc, index) => {
+          const row = Math.floor(index / resourcesPerRow);
+          const col = index % resourcesPerRow;
+          
+          nodes.push({
+            id: `sc-${sc.name}`,
+            name: sc.name,
+            type: 'storageclass',
+            namespace: 'cluster-wide',
+            status: 'healthy',
+            syncStatus: 'synced',
+            position: { 
+              x: col * resourceSpacing, 
+              y: currentY + (row * 150)
+            },
+            dependencies: [],
+            children: [],
+            metadata: {
+              provisioner: sc.provisioner,
+              reclaimPolicy: sc.reclaimPolicy
+            },
+            colorClass: colorPalette[6]
+          });
+        });
+        
+        const scRows = Math.ceil(filteredSCs.length / resourcesPerRow);
+        currentY += scRows * 150 + 60; // Extra spacing between layers
+      }
+      
+      // 2. PersistentVolumes in the middle
+      if (filteredPVs.length > 0) {
+        filteredPVs.forEach((pv, index) => {
+          const row = Math.floor(index / resourcesPerRow);
+          const col = index % resourcesPerRow;
+          
+          // Find the StorageClass that this PV uses
+          const sc = pv.storageClassName ? storageClasses.find(s => s.name === pv.storageClassName) : null;
+          const scDependencies = sc ? [`sc-${sc.name}`] : [];
+          
+          nodes.push({
+            id: `pv-${pv.name}`,
+            name: pv.name,
+            type: 'persistentvolume',
+            namespace: 'cluster-wide',
+            status: 'healthy',
+            syncStatus: 'synced',
+            position: { 
+              x: col * resourceSpacing, 
+              y: currentY + (row * 150)
+            },
+            dependencies: scDependencies,
+            children: [],
+            metadata: {
+              capacity: pv.capacity,
+              storageClass: pv.storageClassName || 'none'
+            },
+            colorClass: colorPalette[4]
+          });
+        });
+        
+        const pvRows = Math.ceil(filteredPVs.length / resourcesPerRow);
+        currentY += pvRows * 150 + 60; // Extra spacing between layers
+      }
+      
+      // 3. PersistentVolumeClaims at the bottom
+      if (filteredPVCs.length > 0) {
+        filteredPVCs.forEach((pvc, index) => {
+          const row = Math.floor(index / resourcesPerRow);
+          const col = index % resourcesPerRow;
+          
+          // Find the PV that this PVC binds to
+          const boundPV = pvc.volumeName ? persistentVolumes.find(pv => pv.name === pvc.volumeName) : null;
+          const pvDependencies = boundPV ? [`pv-${boundPV.name}`] : [];
+          
+          nodes.push({
+            id: `pvc-${pvc.name}`,
+            name: pvc.name,
+            type: 'persistentvolumeclaim',
+            namespace: pvc.namespace,
+            status: 'healthy',
+            syncStatus: 'synced',
+            position: { 
+              x: col * resourceSpacing, 
+              y: currentY + (row * 150)
+            },
+            dependencies: pvDependencies,
+            children: [],
+            metadata: {
+              storage: pvc.storageRequest,
+              storageClass: pvc.storageClassName || 'default',
+              volumeName: pvc.volumeName
+            },
+            colorClass: colorPalette[5]
+          });
+        });
+        
+        const pvcRows = Math.ceil(filteredPVCs.length / resourcesPerRow);
+        currentY += pvcRows * 150 + 40;
+      }
+    }
+    // ===== END UNIFIED STORAGE SECTION =====
+
+
+
     return nodes;
-  }, [deployments, daemonSets, namespaces, configMaps, secrets, serviceAccounts, roles, clusterRoles, jobs, roleBindings, filterType]);
+  }, [deployments, daemonSets, namespaces, configMaps, secrets, serviceAccounts, roles, clusterRoles, jobs, roleBindings, persistentVolumes, persistentVolumeClaims, storageClasses, filterType]);
 
   // Bounding box calculation
   const padding = 40;
@@ -1464,6 +1597,12 @@ export function VisualPreview({
         return <ExternalLink className="w-4 h-4 text-blue-600" />;
       case 'rolebinding':
         return <Link2 className="w-4 h-4 text-blue-500" />;
+      case 'persistentvolume':
+        return <Database className="w-4 h-4 text-green-600" />;
+      case 'persistentvolumeclaim':
+        return <Database className="w-4 h-4 text-blue-600" />;
+      case 'storageclass':
+        return <Settings className="w-4 h-4 text-purple-600" />;
       default:
         return <Info className="w-4 h-4 text-gray-400" />;
     }
@@ -1638,6 +1777,24 @@ export function VisualPreview({
         return ingressYaml?.trim() || '';
       }
     }
+    if (node.type === 'persistentvolume') {
+      const pv = persistentVolumes.find(p => p.name === node.name);
+      if (pv) {
+        return generatePersistentVolumeYaml([pv]);
+      }
+    }
+    if (node.type === 'persistentvolumeclaim') {
+      const pvc = persistentVolumeClaims.find(p => p.name === node.name);
+      if (pvc) {
+        return generatePersistentVolumeClaimYaml([pvc]);
+      }
+    }
+    if (node.type === 'storageclass') {
+      const sc = storageClasses.find(s => s.name === node.name);
+      if (sc) {
+        return generateStorageClassYaml([sc]);
+      }
+    }
     return '# YAML not available for this resource.';
   }
 
@@ -1653,7 +1810,7 @@ export function VisualPreview({
   // Check if there are any resources for the current filter
   const hasFilteredResources = () => {
     if (filterType === 'all') {
-      return validDeployments.length > 0 || validDaemonSets.length > 0 || validServiceAccounts.length > 0 || validJobs.length > 0 || roles.length > 0 || clusterRoles.length > 0 || roleBindings.length > 0;
+      return validDeployments.length > 0 || validDaemonSets.length > 0 || validServiceAccounts.length > 0 || validJobs.length > 0 || roles.length > 0 || clusterRoles.length > 0 || roleBindings.length > 0 || persistentVolumes.length > 0 || persistentVolumeClaims.length > 0 || storageClasses.length > 0;
     } else if (filterType === 'deployments') {
       return validDeployments.length > 0;
     } else if (filterType === 'daemonsets') {
@@ -1676,6 +1833,12 @@ export function VisualPreview({
       return secrets.length > 0;
     } else if (filterType === 'namespaces') {
       return namespaces.length > 0;
+    } else if (filterType === 'pv') {
+      return persistentVolumes.length > 0;
+    } else if (filterType === 'pvc') {
+      return persistentVolumeClaims.length > 0;
+    } else if (filterType === 'storageclass') {
+      return storageClasses.length > 0;
     }
     return false;
   };
